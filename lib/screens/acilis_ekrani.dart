@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../main.dart'; // AnaEkran'a geçiş yapabilmek için
+import '../services/dil_servisi.dart'; // Çoklu dil desteği için ekledik
 
 class AcilisEkrani extends StatefulWidget {
   const AcilisEkrani({super.key});
@@ -31,21 +32,22 @@ class _AcilisEkraniState extends State<AcilisEkrani> {
           // Temizlediğin arka plan resmini tam ekran yerleştiriyoruz
           Image.asset('assets/splash_logo.jpg', fit: BoxFit.cover),
           
-          // GERÇEK HAREKETLİ ANİMASYON VE YAZI
-          const Positioned(
+          // GERÇEK HAREKETLİ ANİMASYON VE DİNAMİK YAZI
+          Positioned( // 'const' kelimesini kaldırdık çünkü dil değişkeni dinamik
             bottom: 160, // TÜBİTAK logosunun tam üstüne hizaladık
             left: 0,
             right: 0,
             child: Column(
               children: [
-                CircularProgressIndicator(
+                const CircularProgressIndicator(
                   color: Color(0xFF009688), // Turkuaz dönen çark
                   strokeWidth: 3,
                 ),
-                SizedBox(height: 15),
+                const SizedBox(height: 15),
                 Text(
-                  'Yükleniyor...',
-                  style: TextStyle(
+                  // Dil TR ise Yükleniyor, değilse Loading yazacak
+                  dilYoneticisi.value == 'TR' ? 'Yükleniyor...' : 'Loading...', 
+                  style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                     color: Color(0xFF009688), // Turkuaz yazı
