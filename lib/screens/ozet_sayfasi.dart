@@ -43,7 +43,8 @@ class _OzetSayfasiState extends State<OzetSayfasi> {
             Map<String, int> bolumSayilari = {};
             for(var r in tumRandevular) {
               String bolum = r.hastaneAd.contains(' - ') ? r.hastaneAd.split(' - ').last : r.hastaneAd;
-              String cevrilmisBolum = evrenselCeviri(bolum); 
+              // DÜZELTİLEN KISIM BURASI: Artık bölümleri randevuMekanCeviri fonksiyonu çevirecek
+              String cevrilmisBolum = randevuMekanCeviri(bolum); 
               bolumSayilari[cevrilmisBolum] = (bolumSayilari[cevrilmisBolum] ?? 0) + 1;
             }
 

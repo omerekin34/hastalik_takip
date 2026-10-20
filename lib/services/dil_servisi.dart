@@ -22,7 +22,7 @@ const Map<String, Map<String, String>> sozluk = {
     'asistana_sor': 'Yapay Zeka Asistanı',
     'mesaj_yaz': 'Sağlığınızla ilgili bir soru sorun...',
     'ai_uyari': 'Not: Yapay zeka tavsiyeleri doktor teşhisi yerine geçmez.',
-     'ai_hosgeldin': 'Merhaba! Ben sizin kişisel sağlık asistanınızım. Tahlil sonuçlarınız, ilaç etkileşimleri veya belirtileriniz hakkında bana her şeyi sorabilirsiniz. Size nasıl yardımcı olabilirim?',
+    'ai_hosgeldin': 'Merhaba! Ben sizin kişisel sağlık asistanınızım. Tahlil sonuçlarınız, ilaç etkileşimleri veya belirtileriniz hakkında bana her şeyi sorabilirsiniz. Size nasıl yardımcı olabilirim?',
   },
   'EN': {
     'uygulama_baslik': 'My Health Assistant', 'ozet': 'Summary', 'hastaliklar': 'Illnesses', 'ilaclar': 'Medications', 'randevular': 'Appointments',
@@ -39,9 +39,9 @@ const Map<String, Map<String, String>> sozluk = {
     'guvenlik_uyarisi': 'Please authenticate to access your health data.',
     'kilit_ac': 'Unlock',
     'kilit_uyari': 'Your data is protected by biometric encryption.',
-      'asistana_sor': 'AI Health Assistant',
-     'mesaj_yaz': 'Ask a health-related question...',
-     'ai_uyari': 'Note: AI advice does not replace a professional medical diagnosis.',
+    'asistana_sor': 'AI Health Assistant',
+    'mesaj_yaz': 'Ask a health-related question...',
+    'ai_uyari': 'Note: AI advice does not replace a professional medical diagnosis.',
     'ai_hosgeldin': 'Hello! I am your personal health assistant. You can ask me anything about your symptoms, medications, or lab results. How can I help you today?',
   }
 };
@@ -56,11 +56,54 @@ List<String> get hastalikListesiDinamik => dilYoneticisi.value == 'TR' ? ['Grip 
 List<String> get ilacListesiDinamik => ['Parol', 'Arveles', 'Majezik', 'Aspirin', 'Augmentin', 'Calpol', 'Dolorex', 'Nurofen', 'Aferin', 'Katarin'];
 
 String evrenselCeviri(String yazi) {
-  // (Önceki çeviri motoru kodların aynı kalıyor, çok uzun olmasın diye buraya sığdırdım)
-  return yazi; // Tamamını bozmamak için eski kodun aynısı farz et
+  if (dilYoneticisi.value == 'TR') return yazi;
+
+  String sonuc = yazi;
+  
+  // Hastalıkları çevir
+  List<String> trHastalik = ['Grip / Soğuk Algınlığı', 'Migren / Baş Ağrısı', 'Hipertansiyon', 'Diyabet (Şeker)', 'Astım / Bronşit', 'Mide Yanması / Gastrit', 'Eklem / Kas Ağrısı', 'Alerji'];
+  List<String> enHastalik = ['Flu / Cold', 'Migraine / Headache', 'Hypertension', 'Diabetes', 'Asthma / Bronchitis', 'Heartburn / Gastritis', 'Joint / Muscle Pain', 'Allergy'];
+  
+  for (int i = 0; i < trHastalik.length; i++) {
+    sonuc = sonuc.replaceAll(trHastalik[i], enHastalik[i]);
+  }
+
+  // Dozaj ve Sıklıkları çevir
+  sonuc = sonuc.replaceAll('Ölçek', 'Scoop')
+               .replaceAll('Damla', 'Drop')
+               .replaceAll('Yarım Tablet', 'Half Tablet')
+               .replaceAll('Tablet', 'Tablet')
+               .replaceAll('Sabah - Akşam', 'Morning - Evening')
+               .replaceAll('Sabah', 'Morning')
+               .replaceAll('Akşam', 'Evening')
+               .replaceAll('Günde 3 Kez', '3 Times a Day')
+               .replaceAll('Aç Karnına', 'On Empty Stomach')
+               .replaceAll('Tok Karnına', 'After Meals')
+               .replaceAll('İhtiyaç Halinde', 'As Needed');
+
+  return sonuc;
 }
 
 String randevuMekanCeviri(String dbMetin) {
-  // (Önceki mekan motoru kodların aynı)
-  return dbMetin;
+  if (dilYoneticisi.value == 'TR') return dbMetin;
+
+  String sonuc = dbMetin;
+
+  // Hastane isimlerini ve tiplerini İngilizceye çevir
+  sonuc = sonuc.replaceAll('Özel', 'Private')
+               .replaceAll('Devlet Hastanesi', 'State Hospital')
+               .replaceAll('Şehir Hastanesi', 'City Hospital')
+               .replaceAll('Eğitim ve Araştırma Hastanesi', 'Training and Research Hospital')
+               .replaceAll('Hastanesi', 'Hospital')
+               .replaceAll('Hastane', 'Hospital');
+
+  // Bölümleri otomatik eşleştirip çevir  
+  List<String> trBolumler = ['Dahiliye (İç Hastalıkları)', 'Kardiyoloji', 'KBB', 'Göz Hastalıkları', 'Ortopedi', 'Nöroloji', 'Cildiye (Dermatoloji)', 'Psikiyatri', 'Üroloji', 'Kadın Doğum', 'Çocuk Sağlığı', 'Genel Cerrahi'];
+  List<String> enBolumler = ['Internal Medicine', 'Cardiology', 'ENT', 'Ophthalmology', 'Orthopedics', 'Neurology', 'Dermatology', 'Psychiatry', 'Urology', 'Gynecology', 'Pediatrics', 'General Surgery'];
+
+  for (int i = 0; i < trBolumler.length; i++) {
+    sonuc = sonuc.replaceAll(trBolumler[i], enBolumler[i]);
+  }
+
+  return sonuc;
 }
