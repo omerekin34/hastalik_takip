@@ -1,34 +1,41 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show rootBundle;
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:intl/intl.dart'; 
+import 'package:intl/intl.dart';
 import '../models/randevu_model.dart';
 import '../services/bildirim_servisi.dart';
+import '../services/ses_servisi.dart'; // Eğer sesli okuma kullanıyorsan
 import '../services/dil_servisi.dart';
-import '../services/ses_servisi.dart'; // SES MOTORU
-import '../main.dart'; 
 
 class RandevularSayfasi extends StatefulWidget {
-  const RandevularSayfasi({super.key});
+  const RandevularSayfasi({Key? key}) : super(key: key);
+
   @override
   State<RandevularSayfasi> createState() => _RandevularSayfasiState();
 }
 
 class _RandevularSayfasiState extends State<RandevularSayfasi> {
   final Box<Randevu> _randevuKutusu = Hive.box<Randevu>('randevular');
-  Map<String, Map<String, List<String>>> hastaneRehberi = {};
-  bool jsonYukleniyor = true;
   bool sesliOkunuyor = false;
 
+  final Color bgColor = const Color(0xFF0B131E);
+  final Color cardColor = const Color(0xFF161F2C);
+  final Color primaryGreen = const Color(0xFF00C48C);
+  final Color primaryOrange = const Color(0xFFFF9900);
+  final Color textLight = const Color(0xFFFFFFFF);
+  final Color textMuted = const Color(0xFF8B98A5);
+  final Color primaryBlue = const Color(0xFF00A3FF);
+
   void _sesliOku(List<Randevu> randevular) async {
-    if (sesliOkunuyor) { await SesServisi.durdur(); setState(() => sesliOkunuyor = false); return; }
+    if (sesliOkunuyor) { 
+      await SesServisi.durdur(); 
+      setState(() => sesliOkunuyor = false); 
+      return; 
+    }
     setState(() => sesliOkunuyor = true);
     
-    String okunacakMetin = metin('randevu_giris');
-    for (var randevu in randevular) {
-      // Sadece Doktor adı ve Bölüm/Hastane okunsun
-      okunacakMetin += "${randevu.doktorAd}, ${randevuMekanCeviri(randevu.hastaneAd)}. ";
+    String okunacakMetin = "Yaklaşan randevularınız: ";
+    for (var r in randevular) {
+      okunacakMetin += "${r.doktorAd}, ${r.hastaneAd}. ";
     }
 
     await SesServisi.konus(okunacakMetin, dilYoneticisi.value);
@@ -37,185 +44,261 @@ class _RandevularSayfasiState extends State<RandevularSayfasi> {
     });
   }
 
-  @override
-  void initState() { super.initState(); _jsonVerisiniYukle(); }
-
-  Future<void> _jsonVerisiniYukle() async {
-    try {
-      final String jsonString = await rootBundle.loadString('assets/veri/hastaneler.json');
-      final decodedVeri = json.decode(jsonString);
-      Map<String, Map<String, List<String>>> islenmisRehber = {};
-      if (decodedVeri is List) {
-        for (var item in decodedVeri) {
-          String il = item['city']?.toString().trim() ?? 'Bilinmeyen İl'; String ilce = item['district']?.toString().trim() ?? 'Bilinmeyen İlçe'; String hastaneAd = item['name']?.toString().trim() ?? 'Bilinmeyen Hastane';
-          if (!islenmisRehber.containsKey(il)) islenmisRehber[il] = {}; if (!islenmisRehber[il]!.containsKey(ilce)) islenmisRehber[il]![ilce] = []; if (!islenmisRehber[il]![ilce]!.contains(hastaneAd)) islenmisRehber[il]![ilce]!.add(hastaneAd);
-        }
-      } else if (decodedVeri is Map) {
-        decodedVeri.forEach((ilAdi, ilceMap) { islenmisRehber[ilAdi] = {}; (ilceMap as Map).forEach((ilceAdi, hastaneListesi) { islenmisRehber[ilAdi]![ilceAdi] = List<String>.from(hastaneListesi); }); });
-      }
-      var siraliIlRehberi = Map.fromEntries(islenmisRehber.entries.toList()..sort((a, b) => a.key.compareTo(b.key)));
-      for (var il in siraliIlRehberi.keys) {
-        var siraliIlceler = Map.fromEntries(siraliIlRehberi[il]!.entries.toList()..sort((a, b) => a.key.compareTo(b.key)));
-        for (var ilce in siraliIlceler.keys) siraliIlceler[ilce]!.sort((a, b) => a.compareTo(b));
-        siraliIlRehberi[il] = siraliIlceler;
-      }
-      setState(() { hastaneRehberi = siraliIlRehberi; jsonYukleniyor = false; });
-    } catch (e) { setState(() { jsonYukleniyor = false; }); }
-  }
-
   void _randevuFormuAc({Randevu? varOlanRandevu}) {
     final doktorController = TextEditingController(text: varOlanRandevu?.doktorAd ?? '');
-    String? secilenIl; String? secilenIlce; String? secilenHastane; bool mekanDiger = false;
-    final manuelHastaneController = TextEditingController();
-    final bolumListesi = bolumListesiDinamik; String secilenBolum = bolumListesi.first; bool bolumDiger = false;
-    final bolumController = TextEditingController(); DateTime secilenTarih = varOlanRandevu?.randevuTarihi ?? DateTime.now(); final digerSecenek = metin('diger');
-
-    if (varOlanRandevu != null) {
-      String dbHastane = varOlanRandevu.hastaneAd;
-      if (dbHastane.contains(' - ')) {
-        int splitIndex = dbHastane.lastIndexOf(' - '); String kayitliMekan = dbHastane.substring(0, splitIndex); String kayitliBolum = dbHastane.substring(splitIndex + 3);
-        String cevrilmisBolum = evrenselCeviri(kayitliBolum);
-        mekanDiger = true; manuelHastaneController.text = kayitliMekan;
-        if (bolumListesi.contains(cevrilmisBolum)) secilenBolum = cevrilmisBolum; else { secilenBolum = digerSecenek; bolumDiger = true; bolumController.text = kayitliBolum; }
-      }
-    }
+    final hastaneController = TextEditingController(text: varOlanRandevu?.hastaneAd ?? '');
+    DateTime secilenTarih = varOlanRandevu?.randevuTarihi ?? DateTime.now().add(const Duration(days: 1));
 
     showModalBottomSheet(
-      context: context, isScrollControlled: true, shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: cardColor,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (context) {
-        return StatefulBuilder(builder: (BuildContext context, StateSetter setModalState) {
-            if (jsonYukleniyor) return const Padding(padding: EdgeInsets.all(40.0), child: Center(child: CircularProgressIndicator(color: Colors.teal)));
-            List<String> guncelIlceler = secilenIl != null && hastaneRehberi.containsKey(secilenIl) ? hastaneRehberi[secilenIl]!.keys.toList() : []; List<String> guncelHastaneler = secilenIl != null && secilenIlce != null && hastaneRehberi[secilenIl]!.containsKey(secilenIlce) ? hastaneRehberi[secilenIl]![secilenIlce]! : [];
-            
-            return Padding(
-              padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 16, right: 16, top: 20),
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Expanded(child: Text(varOlanRandevu == null ? metin('yeni_randevu') : metin('randevu_duzenle'), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold))), IconButton(icon: const Icon(Icons.close), color: temaYoneticisi.value == ThemeMode.dark ? Colors.grey.shade400 : Colors.grey.shade700, onPressed: () => Navigator.pop(context))]),
-                    const SizedBox(height: 15), TextField(controller: doktorController, decoration: InputDecoration(labelText: metin('doktor_adi'), border: const OutlineInputBorder(), prefixIcon: const Icon(Icons.person))), const SizedBox(height: 10),
-                    DropdownButtonFormField<String>(value: secilenIl, hint: Text(metin('il_sec')), decoration: const InputDecoration(border: OutlineInputBorder(), prefixIcon: const Icon(Icons.map)), items: [...hastaneRehberi.keys, digerSecenek].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(), onChanged: (val) { setModalState(() { secilenIl = val; secilenIlce = null; secilenHastane = null; mekanDiger = val == digerSecenek; }); }), const SizedBox(height: 10),
-                    if (secilenIl != null && !mekanDiger) ...[DropdownButtonFormField<String>(value: secilenIlce, hint: Text(metin('ilce_sec')), decoration: const InputDecoration(border: OutlineInputBorder(), prefixIcon: const Icon(Icons.location_city)), items: [...guncelIlceler, digerSecenek].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(), onChanged: (val) { setModalState(() { secilenIlce = val; secilenHastane = null; mekanDiger = val == digerSecenek; }); }), const SizedBox(height: 10)],
-                    if (secilenIlce != null && !mekanDiger) ...[DropdownButtonFormField<String>(value: secilenHastane, isExpanded: true, hint: Text(metin('hastane_sec')), decoration: const InputDecoration(border: OutlineInputBorder(), prefixIcon: const Icon(Icons.local_hospital_outlined)), items: [...guncelHastaneler, digerSecenek].map((e) => DropdownMenuItem(value: e, child: Text(e == digerSecenek ? e : randevuMekanCeviri(e), overflow: TextOverflow.ellipsis))).toList(), onChanged: (val) { setModalState(() { secilenHastane = val; mekanDiger = val == digerSecenek; }); }), const SizedBox(height: 10)],
-                    if (mekanDiger) ...[TextField(controller: manuelHastaneController, decoration: InputDecoration(labelText: metin('hastane_yaz'), border: const OutlineInputBorder(), prefixIcon: const Icon(Icons.domain))), const SizedBox(height: 10)],
-                    DropdownButtonFormField<String>(value: secilenBolum, decoration: InputDecoration(labelText: metin('bolum_sec'), border: const OutlineInputBorder(), prefixIcon: const Icon(Icons.category)), items: [...bolumListesi, digerSecenek].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(), onChanged: (val) => setModalState(() { secilenBolum = val!; bolumDiger = val == digerSecenek; })),
-                    if (bolumDiger) ...[const SizedBox(height: 10), TextField(controller: bolumController, decoration: InputDecoration(labelText: metin('bolum_yaz'), border: const OutlineInputBorder()))],
-                    const SizedBox(height: 15),
-                    ListTile(shape: RoundedRectangleBorder(side: const BorderSide(color: Colors.grey, width: 1), borderRadius: BorderRadius.circular(4)), leading: const Icon(Icons.calendar_month, color: Colors.teal), title: Text(metin('tarih_saat')), subtitle: Text(DateFormat('dd/MM/yyyy - HH:mm').format(secilenTarih)), onTap: () async { DateTime? tarih = await showDatePicker(context: context, initialDate: secilenTarih, firstDate: DateTime.now(), lastDate: DateTime(2030)); if (tarih != null) { TimeOfDay? saat = await showTimePicker(context: context, initialTime: TimeOfDay.fromDateTime(secilenTarih)); if (saat != null) setModalState(() => secilenTarih = DateTime(tarih.year, tarih.month, tarih.day, saat.hour, saat.minute)); } }),
-                    const SizedBox(height: 15),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: () async {
-                          String finalMekan = mekanDiger ? manuelHastaneController.text : (secilenHastane != null && secilenHastane != digerSecenek ? secilenHastane! : '');
-                          final finalBolum = bolumDiger ? bolumController.text : secilenBolum;
-                          final tamMekan = finalMekan.isNotEmpty ? '$finalMekan - $finalBolum' : finalBolum;
-                          
-                          if (doktorController.text.isNotEmpty && finalBolum.isNotEmpty) {
-                            if (varOlanRandevu == null) {
-                              int yeniId = await _randevuKutusu.add(Randevu(doktorAd: doktorController.text, hastaneAd: tamMekan, randevuTarihi: secilenTarih));
-                              await BildirimServisi.randevuHatirlaticiKur(yeniId, doktorController.text, tamMekan, secilenTarih); // YENİ ALARM KURULDU
-                              BildirimServisi.anlikBildirimGoster(baslik: metin('yeni_randevu'), icerik: '${doktorController.text} - Kaydedildi');
-                            } else {
-                              varOlanRandevu.doktorAd = doktorController.text;
-                              varOlanRandevu.hastaneAd = tamMekan;
-                              varOlanRandevu.randevuTarihi = secilenTarih;
-                              varOlanRandevu.save();
-                              await BildirimServisi.randevuHatirlaticiKur(varOlanRandevu.key, doktorController.text, tamMekan, secilenTarih); // ALARM GÜNCELLENDİ
-                            }
-                            Navigator.pop(context);
+        return StatefulBuilder(builder: (context, setModalState) {
+          return Padding(
+            padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 20, right: 20, top: 24),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(varOlanRandevu == null ? 'Yeni Randevu Ekle' : 'Randevuyu Düzenle', style: TextStyle(color: textLight, fontSize: 18, fontWeight: FontWeight.bold)),
+                      IconButton(icon: Icon(Icons.close, color: textMuted), onPressed: () => Navigator.pop(context))
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  TextField(
+                    controller: doktorController,
+                    style: TextStyle(color: textLight),
+                    decoration: InputDecoration(labelText: 'Doktor Adı (Örn: Dr. Ali Yılmaz)', labelStyle: TextStyle(color: textMuted), prefixIcon: Icon(Icons.person, color: textMuted), filled: true, fillColor: bgColor, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none)),
+                  ),
+                  const SizedBox(height: 12),
+                  
+                  TextField(
+                    controller: hastaneController,
+                    style: TextStyle(color: textLight),
+                    decoration: InputDecoration(labelText: 'Hastane & Bölüm (Örn: Şehir Hast. - Üroloji)', labelStyle: TextStyle(color: textMuted), prefixIcon: Icon(Icons.local_hospital, color: textMuted), filled: true, fillColor: bgColor, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none)),
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  ListTile(
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), 
+                    tileColor: bgColor,
+                    leading: Icon(Icons.calendar_month, color: primaryOrange), 
+                    title: Text('Randevu Tarihi ve Saati', style: TextStyle(color: textMuted, fontSize: 12)), 
+                    subtitle: Text(DateFormat('dd/MM/yyyy - HH:mm').format(secilenTarih), style: TextStyle(color: textLight, fontWeight: FontWeight.bold)), 
+                    onTap: () async { 
+                      DateTime? tarih = await showDatePicker(
+                        context: context, initialDate: secilenTarih, firstDate: DateTime.now(), lastDate: DateTime(2030),
+                        builder: (context, child) => Theme(data: ThemeData.dark().copyWith(colorScheme: ColorScheme.dark(primary: primaryGreen)), child: child!),
+                      ); 
+                      if (tarih != null) { 
+                        TimeOfDay? saat = await showTimePicker(
+                          context: context, initialTime: TimeOfDay.fromDateTime(secilenTarih),
+                          builder: (context, child) => Theme(data: ThemeData.dark().copyWith(colorScheme: ColorScheme.dark(primary: primaryGreen)), child: child!),
+                        ); 
+                        if (saat != null) {
+                          setModalState(() => secilenTarih = DateTime(tarih.year, tarih.month, tarih.day, saat.hour, saat.minute));
+                        }
+                      } 
+                    }
+                  ),
+                  const SizedBox(height: 24),
+                  
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        if (doktorController.text.isNotEmpty && hastaneController.text.isNotEmpty) {
+                          if (varOlanRandevu == null) {
+                            // YENİ KAYIT
+                            int yeniId = await _randevuKutusu.add(Randevu(doktorAd: doktorController.text, hastaneAd: hastaneController.text, randevuTarihi: secilenTarih));
+                            await BildirimServisi.randevuHatirlaticiKur(yeniId, doktorController.text, hastaneController.text, secilenTarih); 
+                          } else {
+                            // GÜNCELLEME
+                            varOlanRandevu.doktorAd = doktorController.text;
+                            varOlanRandevu.hastaneAd = hastaneController.text;
+                            varOlanRandevu.randevuTarihi = secilenTarih;
+                            varOlanRandevu.save();
+                            await BildirimServisi.randevuHatirlaticiKur(varOlanRandevu.key, doktorController.text, hastaneController.text, secilenTarih); 
                           }
-                        },
-                        icon: const Icon(Icons.save),
-                        label: Text(varOlanRandevu == null ? metin('kaydet') : metin('guncelle')),
-                        style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 12), backgroundColor: Colors.teal, foregroundColor: Colors.white)
-                      )
-                    ),
-                    const SizedBox(height: 20),
-                  ],
-                ),
+                          Navigator.pop(context);
+                        }
+                      },
+                      icon: const Icon(Icons.save),
+                      label: Text(varOlanRandevu == null ? 'Kaydet' : 'Güncelle', style: const TextStyle(fontWeight: FontWeight.bold)),
+                      style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16), backgroundColor: primaryGreen, foregroundColor: bgColor, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)))
+                    )
+                  ),
+                  const SizedBox(height: 20),
+                ],
               ),
-            );
-          });
+            ),
+          );
+        });
       },
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<ThemeMode>(
-      valueListenable: temaYoneticisi,
-      builder: (context, tema, _) {
-        return ValueListenableBuilder<String>(
-          valueListenable: dilYoneticisi,
-          builder: (context, dil, _) {
-            return Scaffold(
-              body: ValueListenableBuilder(
+    return Scaffold(
+      backgroundColor: bgColor,
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('PLANLI TAKİP', style: TextStyle(color: primaryOrange, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+                      const SizedBox(height: 4),
+                      Text('Randevular', style: TextStyle(color: textLight, fontSize: 24, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: () => _randevuFormuAc(),
+                    style: ElevatedButton.styleFrom(backgroundColor: primaryGreen.withOpacity(0.2), foregroundColor: primaryGreen, elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)), padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
+                    icon: const Icon(Icons.add, size: 16),
+                    label: const Text('Yeni Randevu', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  )
+                ],
+              ),
+            ),
+            
+            Expanded(
+              child: ValueListenableBuilder(
                 valueListenable: _randevuKutusu.listenable(),
                 builder: (context, Box<Randevu> box, _) {
-                  if (box.values.isEmpty) return Center(child: Text(metin('randevu_bos'), textAlign: TextAlign.center));
                   var randevular = box.values.toList()..sort((a, b) => a.randevuTarihi.compareTo(b.randevuTarihi));
                   
                   return Column(
                     children: [
-                      // SESLİ OKU BUTONU
                       Padding(
-                        padding: const EdgeInsets.all(12.0),
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
                         child: SizedBox(
                           width: double.infinity,
-                          child: ElevatedButton.icon(
-                            onPressed: () => _sesliOku(randevular),
-                            icon: Icon(sesliOkunuyor ? Icons.stop_circle : Icons.record_voice_over, size: 28),
-                            label: Text(sesliOkunuyor ? metin('okunuyor') : metin('sesli_oku_randevu'), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                            style: ElevatedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              backgroundColor: sesliOkunuyor ? Colors.red.shade400 : (tema == ThemeMode.dark ? const Color(0xFF80CBC4) : const Color(0xFF00796B)),
-                              foregroundColor: sesliOkunuyor ? Colors.white : (tema == ThemeMode.dark ? Colors.black : Colors.white),
+                          child: OutlinedButton.icon(
+                            onPressed: randevular.isEmpty ? null : () => _sesliOku(randevular),
+                            icon: Icon(sesliOkunuyor ? Icons.stop_circle : Icons.volume_up, size: 20),
+                            label: Text(sesliOkunuyor ? 'Okunuyor...' : 'Randevuları Sesli Oku', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              side: BorderSide(color: sesliOkunuyor ? Colors.redAccent : primaryBlue.withOpacity(0.5)),
+                              backgroundColor: sesliOkunuyor ? Colors.redAccent.withOpacity(0.1) : primaryBlue.withOpacity(0.05),
+                              foregroundColor: sesliOkunuyor ? Colors.redAccent : primaryBlue,
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             ),
                           ),
                         ),
                       ),
+                      const SizedBox(height: 16),
+                      
                       Expanded(
-                        child: ListView.builder(
-                          itemCount: randevular.length,
-                          itemBuilder: (context, index) {
-                            Randevu randevu = randevular[index];
-                            return Card(
-                              elevation: 2, margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                              child: ListTile(
-                                leading: const CircleAvatar(backgroundColor: Colors.teal, child: Icon(Icons.event, color: Colors.white)),
-                                title: Text(randevu.doktorAd, style: const TextStyle(fontWeight: FontWeight.bold)),
-                                subtitle: Text('${randevuMekanCeviri(randevu.hastaneAd)}\n${metin('tarih_saat').split(' ').first}: ${DateFormat('dd/MM/yyyy - HH:mm').format(randevu.randevuTarihi)}'),
-                                isThreeLine: true,
-                                trailing: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    IconButton(icon: const Icon(Icons.edit, color: Colors.blue), onPressed: () => _randevuFormuAc(varOlanRandevu: randevu)),
-                                    IconButton(
-                                      icon: const Icon(Icons.delete_outline, color: Colors.red),
-                                      onPressed: () {
-                                        BildirimServisi.bildirimiIptalEt(randevu.key); // SİLİNİNCE ALARMI DA İPTAL EDİYORUZ
-                                        randevu.delete();
-                                      }
-                                    )
-                                  ]
+                        child: randevular.isEmpty 
+                        ? Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.event_busy, color: textMuted.withOpacity(0.5), size: 64),
+                                const SizedBox(height: 16),
+                                Text('Gelecek bir randevunuz bulunmuyor.', style: TextStyle(color: textMuted, fontSize: 14)),
+                              ],
+                            )
+                          )
+                        : ListView.builder(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            itemCount: randevular.length,
+                            itemBuilder: (context, index) {
+                              Randevu randevu = randevular[index];
+                              bool gecmisMi = randevu.randevuTarihi.isBefore(DateTime.now());
+                              
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 16),
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: cardColor, 
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: gecmisMi ? null : Border.all(color: primaryOrange.withOpacity(0.3))
                                 ),
-                              ),
-                            );
-                          },
-                        ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        CircleAvatar(backgroundColor: primaryGreen.withOpacity(0.2), radius: 24, child: Icon(Icons.person, color: primaryGreen, size: 28)),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(randevu.doktorAd, style: TextStyle(color: textLight, fontSize: 16, fontWeight: FontWeight.bold)),
+                                              const SizedBox(height: 4),
+                                              Text(randevu.hastaneAd, style: TextStyle(color: textMuted, fontSize: 12)),
+                                            ],
+                                          ),
+                                        ),
+                                        Row(
+                                          children: [
+                                            IconButton(icon: Icon(Icons.edit_outlined, color: textMuted, size: 20), onPressed: () => _randevuFormuAc(varOlanRandevu: randevu), constraints: const BoxConstraints(), padding: const EdgeInsets.symmetric(horizontal: 4)),
+                                            IconButton(
+                                              icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
+                                              constraints: const BoxConstraints(), padding: EdgeInsets.zero,
+                                              onPressed: () {
+                                                BildirimServisi.bildirimiIptalEt(randevu.key); 
+                                                randevu.delete();
+                                              }
+                                            )
+                                          ],
+                                        )
+                                      ],
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Container(
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: BoxDecoration(color: bgColor, borderRadius: BorderRadius.circular(12)),
+                                      child: Row(
+                                        children: [
+                                          Icon(Icons.calendar_month, color: gecmisMi ? textMuted : primaryOrange, size: 20),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text(DateFormat('dd MMMM yyyy, EEEE', 'tr_TR').format(randevu.randevuTarihi), style: TextStyle(color: gecmisMi ? textMuted : textLight, fontSize: 13, fontWeight: FontWeight.bold)),
+                                                Text('Saat: ${DateFormat('HH:mm').format(randevu.randevuTarihi)}', style: TextStyle(color: textMuted, fontSize: 12)),
+                                              ],
+                                            ),
+                                          ),
+                                          if (!gecmisMi)
+                                            Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), decoration: BoxDecoration(color: primaryOrange.withOpacity(0.2), borderRadius: BorderRadius.circular(8)), child: Text('Yaklaşıyor', style: TextStyle(color: primaryOrange, fontSize: 10, fontWeight: FontWeight.bold))),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
                       ),
                     ],
                   );
                 },
               ),
-              floatingActionButton: FloatingActionButton(onPressed: () => _randevuFormuAc(), backgroundColor: Colors.teal, foregroundColor: Colors.white, child: const Icon(Icons.add)),
-            );
-          }
-        );
-      }
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

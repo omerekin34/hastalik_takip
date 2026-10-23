@@ -1,148 +1,327 @@
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
 import '../models/hastalik_model.dart';
-import '../services/dil_servisi.dart'; 
-import '../services/ses_servisi.dart'; // SES MOTORU
-import '../main.dart'; 
 
 class HastaliklarSayfasi extends StatefulWidget {
-  const HastaliklarSayfasi({super.key});
+  const HastaliklarSayfasi({Key? key}) : super(key: key);
+
   @override
   State<HastaliklarSayfasi> createState() => _HastaliklarSayfasiState();
 }
 
 class _HastaliklarSayfasiState extends State<HastaliklarSayfasi> {
   final Box<Hastalik> _hastalikKutusu = Hive.box<Hastalik>('hastaliklar');
-  bool sesliOkunuyor = false;
+  String _seciliFiltre = 'Tümü';
 
-  void _sesliOku(List<Hastalik> hastaliklar) async {
-    if (sesliOkunuyor) { await SesServisi.durdur(); setState(() => sesliOkunuyor = false); return; }
-    setState(() => sesliOkunuyor = true);
-    
-    String okunacakMetin = metin('hastalik_giris');
-    for (var hastalik in hastaliklar) {
-      okunacakMetin += "${evrenselCeviri(hastalik.ad)}. ";
-    }
+  final Color bgColor = const Color(0xFF0B131E);
+  final Color cardColor = const Color(0xFF161F2C);
+  final Color primaryGreen = const Color(0xFF00C48C);
+  final Color primaryBlue = const Color(0xFF00A3FF);
+  final Color primaryOrange = const Color(0xFFFF9900);
+  final Color textLight = const Color(0xFFFFFFFF);
+  final Color textMuted = const Color(0xFF8B98A5);
 
-    await SesServisi.konus(okunacakMetin, dilYoneticisi.value);
-    Future.delayed(Duration(seconds: hastaliklar.length * 2 + 2), () {
-      if (mounted) setState(() => sesliOkunuyor = false);
-    });
-  }
-
-  void _kayitPenceresiAc({Hastalik? varOlanHastalik}) {
-    final hastalikListesi = hastalikListesiDinamik; final digerSecenek = metin('diger');
-    String secilenHastalik = hastalikListesi.first; bool hastalikDiger = false;
-    final adController = TextEditingController(); final notController = TextEditingController(text: varOlanHastalik?.doktorNotu ?? '');
-    Uint8List? secilenResimBytes = varOlanHastalik?.resimBytes; final ImagePicker picker = ImagePicker();
-
-    if (varOlanHastalik != null) {
-      String cevrilmisAd = evrenselCeviri(varOlanHastalik.ad);
-      if (hastalikListesi.contains(cevrilmisAd)) secilenHastalik = cevrilmisAd; else { secilenHastalik = digerSecenek; hastalikDiger = true; adController.text = varOlanHastalik.ad; }
-    }
+  // Formu dinamik hale getirdik: Yeni kayıt için boş, düzenleme için dolu açılır
+  void _kayitFormuAc({Hastalik? varOlanHastalik}) {
+    final adController = TextEditingController(text: varOlanHastalik?.ad ?? '');
+    final poliklinikController = TextEditingController(text: varOlanHastalik?.poliklinik ?? '');
+    final doktorController = TextEditingController(text: varOlanHastalik?.doktor ?? '');
+    final hastaneController = TextEditingController(text: varOlanHastalik?.hastane ?? '');
+    final notlarController = TextEditingController(text: varOlanHastalik?.notlar ?? '');
+    final ilaclarController = TextEditingController(text: varOlanHastalik?.ilaclar.join(', ') ?? '');
+    String seciliDurum = varOlanHastalik?.durum ?? 'Aktif Tedavi';
 
     showModalBottomSheet(
-      context: context, isScrollControlled: true, shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: cardColor,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (context) {
-        return StatefulBuilder(builder: (BuildContext context, StateSetter setModalState) {
-            return Padding(
-              padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 16, right: 16, top: 20),
+        return StatefulBuilder(builder: (context, setModalState) {
+          return Padding(
+            padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 20, right: 20, top: 20),
+            child: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Expanded(child: Text(varOlanHastalik == null ? metin('yeni_hastalik') : metin('hastalik_duzenle'), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold))),
-                      IconButton(icon: const Icon(Icons.close), color: temaYoneticisi.value == ThemeMode.dark ? Colors.grey.shade400 : Colors.grey.shade700, onPressed: () => Navigator.pop(context)),
+                      Text(varOlanHastalik == null ? 'Yeni Hastalık / Ziyaret' : 'Hastalığı Düzenle', style: TextStyle(color: textLight, fontSize: 18, fontWeight: FontWeight.bold)),
+                      IconButton(icon: Icon(Icons.close, color: textMuted), onPressed: () => Navigator.pop(context))
                     ],
                   ),
-                  const SizedBox(height: 15),
+                  const SizedBox(height: 16),
+                  _buildTextField(adController, 'Hastalık / Teşhis Adı', Icons.medical_services),
+                  _buildTextField(poliklinikController, 'Poliklinik (Örn: Üroloji)', Icons.domain),
                   DropdownButtonFormField<String>(
-                    value: secilenHastalik, decoration: InputDecoration(labelText: metin('hastalik_sec'), border: const OutlineInputBorder(), prefixIcon: const Icon(Icons.sick)),
-                    items: [...hastalikListesi, digerSecenek].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
-                    onChanged: (val) => setModalState(() { secilenHastalik = val!; hastalikDiger = val == digerSecenek; }),
+                    value: seciliDurum,
+                    dropdownColor: bgColor,
+                    style: TextStyle(color: textLight),
+                    decoration: InputDecoration(filled: true, fillColor: bgColor, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none)),
+                    items: ['Aktif Tedavi', 'Kronik', 'Geçmiş / İyileşti'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                    onChanged: (val) => setModalState(() => seciliDurum = val!),
                   ),
-                  if (hastalikDiger) ...[const SizedBox(height: 10), TextField(controller: adController, decoration: InputDecoration(labelText: metin('sikayet_yaz'), border: const OutlineInputBorder()))],
-                  const SizedBox(height: 15),
-                  TextField(controller: notController, decoration: InputDecoration(labelText: metin('doktor_notu'), border: const OutlineInputBorder(), prefixIcon: const Icon(Icons.notes)), maxLines: 3),
-                  const SizedBox(height: 15),
-                  secilenResimBytes != null ? Stack(alignment: Alignment.topRight, children: [ClipRRect(borderRadius: BorderRadius.circular(8), child: Image.memory(secilenResimBytes!, height: 120, width: double.infinity, fit: BoxFit.cover)), IconButton(icon: const Icon(Icons.cancel, color: Colors.red, size: 30), onPressed: () => setModalState(() => secilenResimBytes = null))]) : OutlinedButton.icon(onPressed: () async { final XFile? resim = await picker.pickImage(source: ImageSource.gallery, imageQuality: 50); if (resim != null) { final bytes = await resim.readAsBytes(); setModalState(() => secilenResimBytes = bytes); } }, icon: const Icon(Icons.add_a_photo, color: Colors.teal), label: Text(metin('fotograf_ekle'), style: const TextStyle(color: Colors.teal)), style: OutlinedButton.styleFrom(side: const BorderSide(color: Colors.teal), padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20))),
-                  const SizedBox(height: 15),
-                  SizedBox(width: double.infinity, child: ElevatedButton.icon(onPressed: () { final finalAd = hastalikDiger ? adController.text : secilenHastalik; if (finalAd.isNotEmpty) { if (varOlanHastalik == null) _hastalikKutusu.add(Hastalik(ad: finalAd, teshisTarihi: DateTime.now(), doktorNotu: notController.text, resimBytes: secilenResimBytes)); else { varOlanHastalik.ad = finalAd; varOlanHastalik.doktorNotu = notController.text; varOlanHastalik.resimBytes = secilenResimBytes; varOlanHastalik.save(); } Navigator.pop(context); } }, icon: const Icon(Icons.save), label: Text(varOlanHastalik == null ? metin('kaydet') : metin('guncelle')), style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 12), backgroundColor: Colors.teal, foregroundColor: Colors.white))),
+                  const SizedBox(height: 12),
+                  _buildTextField(doktorController, 'Doktor Adı', Icons.person),
+                  _buildTextField(hastaneController, 'Hastane', Icons.local_hospital),
+                  _buildTextField(notlarController, 'Doktor Notu / Açıklama', Icons.edit_note, maxLines: 3),
+                  _buildTextField(ilaclarController, 'İlaçlar (Virgülle ayırın)', Icons.medication),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        if (adController.text.isNotEmpty) {
+                          if (varOlanHastalik == null) {
+                            // YENİ KAYIT
+                            final yeniKayit = Hastalik(
+                              ad: adController.text,
+                              poliklinik: poliklinikController.text.isEmpty ? 'Genel' : poliklinikController.text,
+                              durum: seciliDurum,
+                              doktor: doktorController.text,
+                              hastane: hastaneController.text,
+                              tarih: DateTime.now(),
+                              notlar: notlarController.text,
+                              ilaclar: ilaclarController.text.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList(),
+                            );
+                            _hastalikKutusu.add(yeniKayit);
+                          } else {
+                            // GÜNCELLEME
+                            varOlanHastalik.ad = adController.text;
+                            varOlanHastalik.poliklinik = poliklinikController.text.isEmpty ? 'Genel' : poliklinikController.text;
+                            varOlanHastalik.durum = seciliDurum;
+                            varOlanHastalik.doktor = doktorController.text;
+                            varOlanHastalik.hastane = hastaneController.text;
+                            varOlanHastalik.notlar = notlarController.text;
+                            varOlanHastalik.ilaclar = ilaclarController.text.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+                            varOlanHastalik.save(); // Değişiklikleri veritabanına yaz
+                          }
+                          Navigator.pop(context);
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(backgroundColor: primaryGreen, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                      child: Text(varOlanHastalik == null ? 'Kaydet' : 'Güncelle', style: const TextStyle(color: Color(0xFF0B131E), fontWeight: FontWeight.bold)),
+                    ),
+                  ),
                   const SizedBox(height: 20),
                 ],
               ),
-            );
-          });
-      },
+            ),
+          );
+        });
+      }
+    );
+  }
+
+  Widget _buildTextField(TextEditingController controller, String label, IconData icon, {int maxLines = 1}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: TextField(
+        controller: controller,
+        style: TextStyle(color: textLight),
+        maxLines: maxLines,
+        decoration: InputDecoration(
+          labelText: label,
+          labelStyle: TextStyle(color: textMuted),
+          prefixIcon: Icon(icon, color: textMuted),
+          filled: true,
+          fillColor: bgColor,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+        ),
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<ThemeMode>(
-      valueListenable: temaYoneticisi,
-      builder: (context, tema, _) {
-        return ValueListenableBuilder<String>(
-          valueListenable: dilYoneticisi,
-          builder: (context, dil, _) {
-            return Scaffold(
-              body: ValueListenableBuilder(
+    return Scaffold(
+      backgroundColor: bgColor,
+      body: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Hastalık & Ziyaret\nGeçmişi', style: TextStyle(color: textLight, fontSize: 24, fontWeight: FontWeight.bold, height: 1.2)),
+                          const SizedBox(height: 6),
+                          Text('Klinik kayıtlarınız, hekim notları', style: TextStyle(color: textMuted, fontSize: 12)),
+                        ],
+                      ),
+                      InkWell(
+                        onTap: () => _kayitFormuAc(),
+                        child: CircleAvatar(backgroundColor: primaryGreen, radius: 20, child: Icon(Icons.add, color: bgColor)),
+                      )
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        _buildFilterChip('Tümü'),
+                        const SizedBox(width: 8),
+                        _buildFilterChip('Aktif Tedavi'),
+                        const SizedBox(width: 8),
+                        _buildFilterChip('Kronik'),
+                        const SizedBox(width: 8),
+                        _buildFilterChip('Geçmiş / İyileşti'),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () => _kayitFormuAc(),
+                      style: OutlinedButton.styleFrom(side: BorderSide(color: primaryGreen.withOpacity(0.5)), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), padding: const EdgeInsets.symmetric(vertical: 14), backgroundColor: primaryGreen.withOpacity(0.05)),
+                      icon: Icon(Icons.add_circle_outline, color: primaryGreen, size: 18),
+                      label: Text('Yeni Ziyaret / Hastalık Ekle', style: TextStyle(color: primaryGreen, fontSize: 14, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: ValueListenableBuilder(
                 valueListenable: _hastalikKutusu.listenable(),
                 builder: (context, Box<Hastalik> box, _) {
-                  if (box.values.isEmpty) return Center(child: Text(metin('hastalik_yok'), textAlign: TextAlign.center));
-                  var hastaliklar = box.values.toList()..sort((a, b) => b.teshisTarihi.compareTo(a.teshisTarihi));
+                  var liste = box.values.toList();
+                  if (_seciliFiltre != 'Tümü') {
+                    liste = liste.where((h) => h.durum == _seciliFiltre).toList();
+                  }
                   
-                  return Column(
-                    children: [
-                      // SESLİ OKU BUTONU
-                      Padding(
-                        padding: const EdgeInsets.all(12.0),
-                        child: SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton.icon(
-                            onPressed: () => _sesliOku(hastaliklar),
-                            icon: Icon(sesliOkunuyor ? Icons.stop_circle : Icons.record_voice_over, size: 28),
-                            label: Text(sesliOkunuyor ? metin('okunuyor') : metin('sesli_oku_hastalik'), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                            style: ElevatedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              backgroundColor: sesliOkunuyor ? Colors.red.shade400 : (tema == ThemeMode.dark ? const Color(0xFF80CBC4) : const Color(0xFF00796B)),
-                              foregroundColor: sesliOkunuyor ? Colors.white : (tema == ThemeMode.dark ? Colors.black : Colors.white),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            ),
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        child: ListView.builder(
-                          itemCount: hastaliklar.length,
-                          itemBuilder: (context, index) {
-                            Hastalik hastalik = hastaliklar[index];
-                            return Card(
-                              elevation: 2, margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                              child: ListTile(
-                                leading: hastalik.resimBytes != null ? ClipRRect(borderRadius: BorderRadius.circular(4), child: Image.memory(hastalik.resimBytes!, width: 50, height: 50, fit: BoxFit.cover)) : const CircleAvatar(backgroundColor: Colors.teal, child: Icon(Icons.medical_information, color: Colors.white)),
-                                title: Text(evrenselCeviri(hastalik.ad), style: const TextStyle(fontWeight: FontWeight.bold)),
-                                subtitle: Text('${metin('tarih')}: ${hastalik.teshisTarihi.day}/${hastalik.teshisTarihi.month}/${hastalik.teshisTarihi.year}\n${metin('not')}: ${hastalik.doktorNotu}'),
-                                isThreeLine: true,
-                                trailing: Row(mainAxisSize: MainAxisSize.min, children: [IconButton(icon: const Icon(Icons.edit, color: Colors.blue), onPressed: () => _kayitPenceresiAc(varOlanHastalik: hastalik)), IconButton(icon: const Icon(Icons.delete_outline, color: Colors.red), onPressed: () => hastalik.delete())]),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ],
+                  if (liste.isEmpty) {
+                    return Center(child: Text('Henüz kayıt bulunmuyor.', style: TextStyle(color: textMuted)));
+                  }
+
+                  return ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    itemCount: liste.length,
+                    itemBuilder: (context, index) {
+                      final hastalik = liste[index];
+                      return _buildDynamicCard(hastalik);
+                    },
                   );
                 },
               ),
-              floatingActionButton: FloatingActionButton(onPressed: () => _kayitPenceresiAc(), backgroundColor: Colors.teal, foregroundColor: Colors.white, child: const Icon(Icons.add)),
-            );
-          }
-        );
-      }
+            )
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilterChip(String label) {
+    bool isSelected = _seciliFiltre == label;
+    return InkWell(
+      onTap: () => setState(() => _seciliFiltre = label),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? primaryGreen.withOpacity(0.2) : cardColor,
+          border: Border.all(color: isSelected ? primaryGreen : textMuted.withOpacity(0.3)),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(label, style: TextStyle(color: isSelected ? primaryGreen : textMuted, fontSize: 12, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
+      ),
+    );
+  }
+
+  Widget _buildDynamicCard(Hastalik hastalik) {
+    Color durumRengi = primaryGreen;
+    if (hastalik.durum == 'Aktif Tedavi') durumRengi = primaryOrange;
+    if (hastalik.durum == 'Kronik') durumRengi = primaryBlue;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(16)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Text(hastalik.poliklinik, style: TextStyle(color: textMuted, fontSize: 12)),
+                  const SizedBox(width: 8),
+                  Container(width: 4, height: 4, decoration: BoxDecoration(color: durumRengi, shape: BoxShape.circle)),
+                  const SizedBox(width: 8),
+                  Text(hastalik.durum, style: TextStyle(color: durumRengi, fontSize: 12, fontWeight: FontWeight.bold)),
+                ],
+              ),
+              // DÜZENLE VE SİL BUTONLARI BURADA YAN YANA
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: Icon(Icons.edit_outlined, color: textMuted, size: 20),
+                    constraints: const BoxConstraints(),
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    onPressed: () => _kayitFormuAc(varOlanHastalik: hastalik),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
+                    constraints: const BoxConstraints(),
+                    padding: EdgeInsets.zero,
+                    onPressed: () => hastalik.delete(),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(hastalik.ad, style: TextStyle(color: textLight, fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Icon(Icons.medical_information_outlined, color: textMuted, size: 14),
+              const SizedBox(width: 6),
+              Expanded(child: Text('${hastalik.doktor} • ${hastalik.hastane}', style: TextStyle(color: textMuted, fontSize: 12), overflow: TextOverflow.ellipsis)),
+            ],
+          ),
+          if (hastalik.notlar.isNotEmpty) ...[
+            const Padding(padding: EdgeInsets.symmetric(vertical: 12), child: Divider(color: Colors.white10, height: 1)),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.edit_document, color: durumRengi, size: 16),
+                    const SizedBox(width: 6),
+                    Text('Doktor Ziyaret Notu', style: TextStyle(color: durumRengi, fontSize: 12, fontWeight: FontWeight.bold)),
+                  ],
+                ),
+                Text(DateFormat('dd MMM yyyy').format(hastalik.tarih), style: TextStyle(color: textMuted, fontSize: 11)),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(hastalik.notlar, style: TextStyle(color: textLight, fontSize: 13, height: 1.4)),
+          ],
+          if (hastalik.ilaclar.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 8, runSpacing: 8,
+              children: hastalik.ilaclar.map((ilac) => Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(color: bgColor, borderRadius: BorderRadius.circular(8), border: Border.all(color: textMuted.withOpacity(0.2))),
+                child: Text(ilac, style: TextStyle(color: textLight, fontSize: 11)),
+              )).toList(),
+            ),
+          ]
+        ],
+      ),
     );
   }
 }

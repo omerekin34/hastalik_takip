@@ -18,24 +18,36 @@ class IlacAdapter extends TypeAdapter<Ilac> {
     };
     return Ilac(
       ad: fields[0] as String,
-      doz: fields[1] as String,
-      kullanimSikligi: fields[2] as String,
-      bittiMi: fields[3] as bool,
+      tur: fields[1] as String,
+      talimat: fields[2] as String,
+      kalanMiktar: fields[3] as int,
+      bagliTeshis: fields[4] as String,
+      zamanDilimi: fields[5] as String,
+      saat: fields[6] as String,
+      alindiMi: fields[7] as bool,
     );
   }
 
   @override
   void write(BinaryWriter writer, Ilac obj) {
     writer
-      ..writeByte(4)
+      ..writeByte(8)
       ..writeByte(0)
       ..write(obj.ad)
       ..writeByte(1)
-      ..write(obj.doz)
+      ..write(obj.tur)
       ..writeByte(2)
-      ..write(obj.kullanimSikligi)
+      ..write(obj.talimat)
       ..writeByte(3)
-      ..write(obj.bittiMi);
+      ..write(obj.kalanMiktar)
+      ..writeByte(4)
+      ..write(obj.bagliTeshis)
+      ..writeByte(5)
+      ..write(obj.zamanDilimi)
+      ..writeByte(6)
+      ..write(obj.saat)
+      ..writeByte(7)
+      ..write(obj.alindiMi);
   }
 
   @override
