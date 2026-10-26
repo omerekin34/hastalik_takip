@@ -22,12 +22,61 @@ class _IlaclarSayfasiState extends State<IlaclarSayfasi> {
   final Color textLight = const Color(0xFFFFFFFF);
   final Color textMuted = const Color(0xFF8B98A5);
 
+  // Popüler İlaç Türleri
+  final List<String> _populerTurler = [
+    'Tablet / Hap',
+    'Kapsül',
+    'Şurup / Süspansiyon',
+    'Damla (Göz / Kulak / Burun)',
+    'Sprey / İnhaler',
+    'Krem / Merhem',
+    'Enjeksiyon / İğne',
+    'Diğer / Manuel Yaz'
+  ];
+
+  // Popüler Kullanım Talimatları
+  final List<String> _populerTalimatlar = [
+    'Tok Karnına',
+    'Aç Karnına',
+    'Yemek Arasında',
+    'Yatmadan Önce',
+    'Sabah Aç Karnına',
+    'Günde 3 Kez (Yemeklerden Sonra)',
+    'Bol Su ile Alınız',
+    'Diğer / Manuel Yaz'
+  ];
+
   void _ilacFormuAc({Ilac? varOlanIlac}) {
     final adController = TextEditingController(text: varOlanIlac?.ad ?? '');
-    final turController = TextEditingController(text: varOlanIlac?.tur ?? '');
-    final talimatController = TextEditingController(text: varOlanIlac?.talimat ?? '');
     final miktarController = TextEditingController(text: varOlanIlac?.kalanMiktar.toString() ?? '');
     final teshisController = TextEditingController(text: varOlanIlac?.bagliTeshis ?? '');
+    
+    final manuelTurController = TextEditingController();
+    final manuelTalimatController = TextEditingController();
+
+    String? secilenTur = varOlanIlac?.tur;
+    bool manuelTurModu = false;
+
+    String? secilenTalimat = varOlanIlac?.talimat;
+    bool manuelTalimatModu = false;
+
+    // Eğer kayıtlı tür listede yoksa manuel moda al
+    if (secilenTur != null && secilenTur.isNotEmpty) {
+      if (!_populerTurler.contains(secilenTur)) {
+        secilenTur = 'Diğer / Manuel Yaz';
+        manuelTurModu = true;
+        manuelTurController.text = varOlanIlac?.tur ?? '';
+      }
+    }
+
+    // Eğer kayıtlı talimat listede yoksa manuel moda al
+    if (secilenTalimat != null && secilenTalimat.isNotEmpty) {
+      if (!_populerTalimatlar.contains(secilenTalimat)) {
+        secilenTalimat = 'Diğer / Manuel Yaz';
+        manuelTalimatModu = true;
+        manuelTalimatController.text = varOlanIlac?.talimat ?? '';
+      }
+    }
     
     String seciliZaman = varOlanIlac?.zamanDilimi ?? 'Sabah';
     TimeOfDay seciliSaat = TimeOfDay(
@@ -47,6 +96,7 @@ class _IlaclarSayfasiState extends State<IlaclarSayfasi> {
             child: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -56,17 +106,88 @@ class _IlaclarSayfasiState extends State<IlaclarSayfasi> {
                     ],
                   ),
                   const SizedBox(height: 16),
+                  
                   _buildTextField(adController, 'İlaç Adı (Doz ile birlikte)', Icons.medication),
-                  _buildTextField(turController, 'Türü (Tablet, Şurup vs.)', Icons.science),
-                  _buildTextField(talimatController, 'Kullanım Talimatı', Icons.info_outline),
+                  
+                  // İLAÇ TÜRÜ SEÇİMİ (Açılır Menü + Manuel)
+                  DropdownButtonFormField<String>(
+                    value: secilenTur,
+                    dropdownColor: cardColor,
+                    style: TextStyle(color: textLight),
+                    decoration: InputDecoration(
+                      labelText: 'İlaç Türü Seçin',
+                      labelStyle: TextStyle(color: textMuted),
+                      prefixIcon: Icon(Icons.science, color: primaryGreen),
+                      filled: true,
+                      fillColor: bgColor,
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none)
+                    ),
+                    items: _populerTurler.map((tur) => DropdownMenuItem(value: tur, child: Text(tur))).toList(),
+                    onChanged: (val) {
+                      setModalState(() {
+                        secilenTur = val;
+                        if (val == 'Diğer / Manuel Yaz') {
+                          manuelTurModu = true;
+                        } else {
+                          manuelTurModu = false;
+                        }
+                      });
+                    },
+                  ),
+
+                  if (manuelTurModu) ...[
+                    const SizedBox(height: 10),
+                    _buildTextField(manuelTurController, 'İlaç Türünü Kendiniz Yazın', Icons.edit),
+                  ],
+                  const SizedBox(height: 12),
+
+                  // KULLANIM TALİMATI SEÇİMİ (Açılır Menü + Manuel)
+                  DropdownButtonFormField<String>(
+                    value: secilenTalimat,
+                    dropdownColor: cardColor,
+                    style: TextStyle(color: textLight),
+                    decoration: InputDecoration(
+                      labelText: 'Kullanım Talimatı Seçin',
+                      labelStyle: TextStyle(color: textMuted),
+                      prefixIcon: Icon(Icons.info_outline, color: primaryOrange),
+                      filled: true,
+                      fillColor: bgColor,
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none)
+                    ),
+                    items: _populerTalimatlar.map((talimat) => DropdownMenuItem(value: talimat, child: Text(talimat))).toList(),
+                    onChanged: (val) {
+                      setModalState(() {
+                        secilenTalimat = val;
+                        if (val == 'Diğer / Manuel Yaz') {
+                          manuelTalimatModu = true;
+                        } else {
+                          manuelTalimatModu = false;
+                        }
+                      });
+                    },
+                  ),
+
+                  if (manuelTalimatModu) ...[
+                    const SizedBox(height: 10),
+                    _buildTextField(manuelTalimatController, 'Talimatı Kendiniz Yazın', Icons.edit),
+                  ],
+                  const SizedBox(height: 12),
+
                   _buildTextField(miktarController, 'Kalan Miktar (Sayı)', Icons.numbers, isNumber: true),
                   _buildTextField(teshisController, 'İlgili Teşhis', Icons.medical_services),
                   
                   DropdownButtonFormField<String>(
                     value: seciliZaman,
-                    dropdownColor: bgColor,
+                    dropdownColor: cardColor,
                     style: TextStyle(color: textLight),
-                    decoration: InputDecoration(filled: true, fillColor: bgColor, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none)),
+                    decoration: InputDecoration(
+                      labelText: 'Zaman Dilimi',
+                      labelStyle: TextStyle(color: textMuted),
+                      prefixIcon: Icon(Icons.wb_sunny, color: primaryBlue),
+                      filled: true, 
+                      fillColor: bgColor, 
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none)
+                    ),
                     items: ['Sabah', 'Öğle', 'Akşam', 'Gece'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
                     onChanged: (val) => setModalState(() => seciliZaman = val!),
                   ),
@@ -94,14 +215,16 @@ class _IlaclarSayfasiState extends State<IlaclarSayfasi> {
                     child: ElevatedButton(
                       onPressed: () {
                         if (adController.text.isNotEmpty && miktarController.text.isNotEmpty) {
+                          String finalTur = manuelTurModu ? manuelTurController.text : (secilenTur ?? 'Tablet');
+                          String finalTalimat = manuelTalimatModu ? manuelTalimatController.text : (secilenTalimat ?? 'Tok Karnına');
                           String saatFormatli = '${seciliSaat.hour.toString().padLeft(2,'0')}:${seciliSaat.minute.toString().padLeft(2,'0')}';
                           
                           if (varOlanIlac == null) {
                             final yeniIlac = Ilac(
                               ad: adController.text,
-                              tur: turController.text,
-                              talimat: talimatController.text,
-                              kalanMiktar: int.parse(miktarController.text),
+                              tur: finalTur,
+                              talimat: finalTalimat,
+                              kalanMiktar: int.tryParse(miktarController.text) ?? 10,
                               bagliTeshis: teshisController.text,
                               zamanDilimi: seciliZaman,
                               saat: saatFormatli,
@@ -109,15 +232,19 @@ class _IlaclarSayfasiState extends State<IlaclarSayfasi> {
                             _ilacKutusu.add(yeniIlac);
                           } else {
                             varOlanIlac.ad = adController.text;
-                            varOlanIlac.tur = turController.text;
-                            varOlanIlac.talimat = talimatController.text;
-                            varOlanIlac.kalanMiktar = int.parse(miktarController.text);
+                            varOlanIlac.tur = finalTur;
+                            varOlanIlac.talimat = finalTalimat;
+                            varOlanIlac.kalanMiktar = int.tryParse(miktarController.text) ?? 10;
                             varOlanIlac.bagliTeshis = teshisController.text;
                             varOlanIlac.zamanDilimi = seciliZaman;
                             varOlanIlac.saat = saatFormatli;
                             varOlanIlac.save();
                           }
                           Navigator.pop(context);
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Lütfen ilaç adını ve kalan miktarı eksiksiz doldurun!')),
+                          );
                         }
                       },
                       style: ElevatedButton.styleFrom(backgroundColor: primaryGreen, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
@@ -146,7 +273,7 @@ class _IlaclarSayfasiState extends State<IlaclarSayfasi> {
     );
   }
 
-  @override
+ @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: bgColor,
@@ -154,22 +281,50 @@ class _IlaclarSayfasiState extends State<IlaclarSayfasi> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // HİZALAMA VE TAŞMA SORUNU ÇÖZÜLEN BAŞLIK KISMI
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.center, // Buton ve yazıları aynı dikey hizaya sokar
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('GÜNLÜK TEDAVİ PLANI', style: TextStyle(color: primaryGreen, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
-                      const SizedBox(height: 4),
-                      Text('İlaç Takip & Hatırlatıcı', style: TextStyle(color: textLight, fontSize: 22, fontWeight: FontWeight.bold)),
-                    ],
+                  // 1. Geri Butonu
+                  IconButton(
+                    icon: Icon(Icons.arrow_back_ios_new, color: textLight, size: 20),
+                    onPressed: () => Navigator.pop(context),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
                   ),
+                  const SizedBox(width: 12),
+                  
+                  // 2. Yazı Kısmı (Expanded ile sarıldığı için butonu ezmez)
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('GÜNLÜK TEDAVİ PLANI', style: TextStyle(color: primaryGreen, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+                        const SizedBox(height: 4),
+                        Text(
+                          'İlaç Takip & Hatırlatıcı', 
+                          style: TextStyle(color: textLight, fontSize: 20, fontWeight: FontWeight.bold),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis, // Ekrana sığmazsa sonuna ... koyar
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  const SizedBox(width: 8),
+                  
+                  // 3. Yeni İlaç Butonu
                   ElevatedButton.icon(
                     onPressed: () => _ilacFormuAc(),
-                    style: ElevatedButton.styleFrom(backgroundColor: primaryGreen.withOpacity(0.2), foregroundColor: primaryGreen, elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)), padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: primaryGreen.withOpacity(0.2), 
+                      foregroundColor: primaryGreen, 
+                      elevation: 0, 
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)), 
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8)
+                    ),
                     icon: const Icon(Icons.add, size: 16),
                     label: const Text('Yeni İlaç', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                   )
@@ -183,12 +338,10 @@ class _IlaclarSayfasiState extends State<IlaclarSayfasi> {
                 builder: (context, Box<Ilac> box, _) {
                   var ilaclar = box.values.toList();
                   
-                  // İstatistikleri hesapla
                   int aktifIlacSayisi = ilaclar.length;
                   int alinanDoz = ilaclar.where((i) => i.alindiMi).length;
                   double uyumYuzdesi = aktifIlacSayisi > 0 ? (alinanDoz / aktifIlacSayisi) : 0.0;
                   
-                  // Kritik stokta olanları bul (5'ten az kalmışsa)
                   var kritikIlaclar = ilaclar.where((i) => i.kalanMiktar <= 5).toList();
 
                   return SingleChildScrollView(
@@ -300,7 +453,6 @@ class _IlaclarSayfasiState extends State<IlaclarSayfasi> {
 
   Widget _buildDynamicMedicineCard(Ilac ilac) {
     bool isCompleted = ilac.alindiMi;
-    // Eğer ilaç alınmamışsa turuncu kart yapıyoruz
     bool isNext = !isCompleted; 
 
     return Container(
@@ -342,7 +494,7 @@ class _IlaclarSayfasiState extends State<IlaclarSayfasi> {
             crossAxisAlignment: CrossAxisAlignment.baseline,
             textBaseline: TextBaseline.alphabetic,
             children: [
-              Text(ilac.ad, style: TextStyle(color: isCompleted ? textMuted : textLight, fontSize: 18, fontWeight: FontWeight.bold, decoration: isCompleted ? TextDecoration.lineThrough : null)),
+              Expanded(child: Text(ilac.ad, style: TextStyle(color: isCompleted ? textMuted : textLight, fontSize: 18, fontWeight: FontWeight.bold, decoration: isCompleted ? TextDecoration.lineThrough : null))),
               const SizedBox(width: 8),
               Text(ilac.tur, style: TextStyle(color: textMuted, fontSize: 11)),
             ],

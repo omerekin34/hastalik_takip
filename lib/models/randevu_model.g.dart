@@ -21,13 +21,14 @@ class RandevuAdapter extends TypeAdapter<Randevu> {
       hastaneAd: fields[1] as String,
       randevuTarihi: fields[2] as DateTime,
       bildirimAcikMi: fields[3] as bool,
+      notlar: fields[4] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, Randevu obj) {
     writer
-      ..writeByte(4)
+      ..writeByte(5)
       ..writeByte(0)
       ..write(obj.doktorAd)
       ..writeByte(1)
@@ -35,7 +36,9 @@ class RandevuAdapter extends TypeAdapter<Randevu> {
       ..writeByte(2)
       ..write(obj.randevuTarihi)
       ..writeByte(3)
-      ..write(obj.bildirimAcikMi);
+      ..write(obj.bildirimAcikMi)
+      ..writeByte(4)
+      ..write(obj.notlar);
   }
 
   @override

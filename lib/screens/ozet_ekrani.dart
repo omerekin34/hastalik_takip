@@ -5,9 +5,9 @@ import '../models/kullanici_model.dart';
 import '../models/hastalik_model.dart';
 import '../models/ilac_model.dart';
 import '../models/randevu_model.dart';
-import 'yapay_zeka_sayfasi.dart';
 import 'kilit_ekrani.dart';
 import 'profil_kayit_ekrani.dart';
+import 'randevular_sayfasi.dart';
 
 class OzetEkrani extends StatefulWidget {
   const OzetEkrani({Key? key}) : super(key: key);
@@ -25,8 +25,11 @@ class _OzetEkraniState extends State<OzetEkrani> {
   final Color textLight = const Color(0xFFFFFFFF);
   final Color textMuted = const Color(0xFF8B98A5);
 
+
   @override
   Widget build(BuildContext context) {
+
+    
     // Tüm veritabanlarını aynı anda dinleyerek özet ekranını anlık güncelliyoruz
     return AnimatedBuilder(
       animation: Listenable.merge([
@@ -58,8 +61,7 @@ class _OzetEkraniState extends State<OzetEkrani> {
                   const SizedBox(height: 24),
                   _buildPolyclinicDistribution(),
                   const SizedBox(height: 24),
-                  _buildAIAssistantCard(context),
-                  const SizedBox(height: 20), // Alt menü boşluğu
+                 
                 ],
               ),
             ),
@@ -88,7 +90,7 @@ Widget _buildHeader(BuildContext context) {
                   children: [
                     Container(width: 6, height: 6, decoration: BoxDecoration(color: primaryGreen, shape: BoxShape.circle)),
                     const SizedBox(width: 4),
-                    Text('Cihazda Güvende • SQLite', style: TextStyle(color: primaryGreen, fontSize: 10)),
+                    Text('Cihazda Güvende', style: TextStyle(color: primaryGreen, fontSize: 10)),
                   ],
                 )
               ],
@@ -141,111 +143,244 @@ Widget _buildHeader(BuildContext context) {
     final pinController = TextEditingController(text: kullanici.pinKodu);
     String secilenCinsiyet = kullanici.cinsiyet;
     bool beniHatirla = kullanici.beniHatirla;
+    bool pinGizli = true; // Şifre gizleme özelliği için
+
+    // Premium Tema Renkleri
+    final Color modalBgColor = const Color(0xFF161F2C);
+    final Color inputBgColor = const Color(0xFF0B131E);
+    final Color primaryGreen = const Color(0xFF00C48C);
+    final Color dangerRed = const Color(0xFFFF4C4C);
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: cardColor,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      backgroundColor: Colors.transparent, // Yuvarlak köşeler için şeffaf
       builder: (context) {
-        return StatefulBuilder(builder: (context, setModalState) {
-          return Padding(
-            padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 20, right: 20, top: 20),
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: modalBgColor,
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 20, spreadRadius: 5),
+                  ],
+                ),
+                padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text('Profil Ayarları', style: TextStyle(color: textLight, fontSize: 18, fontWeight: FontWeight.bold)),
-                      IconButton(icon: Icon(Icons.close, color: textMuted), onPressed: () => Navigator.pop(context))
+                      // Sürükleme Çubuğu
+                      Container(
+                        width: 48,
+                        height: 5,
+                        margin: const EdgeInsets.only(bottom: 24),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade700,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+
+                      // Premium Profil Başlığı ve Avatar
+                      Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 26,
+                            backgroundColor: primaryGreen.withOpacity(0.15),
+                            child: Text(
+                              adController.text.isNotEmpty ? adController.text[0].toUpperCase() : 'U',
+                              style: TextStyle(color: primaryGreen, fontSize: 22, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('Profil Ayarları', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+                                const SizedBox(height: 4),
+                                Text('Kişisel bilgilerinizi yönetin', style: TextStyle(color: Colors.grey.shade400, fontSize: 12)),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            icon: Icon(Icons.close_rounded, color: Colors.grey.shade400),
+                            onPressed: () => Navigator.pop(context),
+                            splashRadius: 24,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 28),
+
+                      // Ad Soyad Alanı (Derinlik Efektli)
+                      TextFormField(
+                        controller: adController,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: InputDecoration(
+                          labelText: 'Adınız Soyadınız',
+                          labelStyle: TextStyle(color: Colors.grey.shade500, fontSize: 14),
+                          prefixIcon: Icon(Icons.person_outline, color: primaryGreen),
+                          filled: true,
+                          fillColor: inputBgColor,
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: primaryGreen, width: 1.5)),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Cinsiyet Dropdown
+                      DropdownButtonFormField<String>(
+                        value: secilenCinsiyet,
+                        dropdownColor: modalBgColor,
+                        style: const TextStyle(color: Colors.white, fontSize: 15),
+                        icon: Icon(Icons.keyboard_arrow_down_rounded, color: Colors.grey.shade400),
+                        decoration: InputDecoration(
+                          labelText: 'Hitap (Cinsiyet)',
+                          labelStyle: TextStyle(color: Colors.grey.shade500, fontSize: 14),
+                          filled: true,
+                          fillColor: inputBgColor,
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: primaryGreen, width: 1.5)),
+                        ),
+                        items: ['Erkek', 'Kadın', 'Belirtmek İstemiyorum'].map((String value) {
+                          return DropdownMenuItem<String>(value: value, child: Text(value));
+                        }).toList(),
+                        onChanged: (yeniDeger) {
+                          if (yeniDeger != null) setModalState(() => secilenCinsiyet = yeniDeger);
+                        },
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Güvenlik PIN Alanı (Göz İkonlu)
+                      TextFormField(
+                        controller: pinController,
+                        obscureText: pinGizli,
+                        keyboardType: TextInputType.number,
+                        maxLength: 6,
+                        style: const TextStyle(color: Colors.white, letterSpacing: 4, fontWeight: FontWeight.bold),
+                        decoration: InputDecoration(
+                          labelText: 'Güvenlik PIN Kodu',
+                          labelStyle: TextStyle(color: Colors.grey.shade500, fontSize: 14, letterSpacing: 0, fontWeight: FontWeight.normal),
+                          prefixIcon: Icon(Icons.lock_outline, color: primaryGreen),
+                          suffixIcon: IconButton(
+                            icon: Icon(pinGizli ? Icons.visibility_off_outlined : Icons.visibility_outlined, color: Colors.grey.shade500),
+                            onPressed: () => setModalState(() => pinGizli = !pinGizli),
+                          ),
+                          filled: true,
+                          fillColor: inputBgColor,
+                          counterStyle: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: primaryGreen, width: 1.5)),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+
+                      // Özel Tasarım Beni Hatırla Switch Kartı
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: inputBgColor,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: Colors.white.withOpacity(0.05)),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(color: primaryGreen.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+                                  child: Icon(Icons.fingerprint_rounded, color: primaryGreen, size: 20),
+                                ),
+                                const SizedBox(width: 16),
+                                const Text('Beni Hatırla (Oto Giriş)', style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w500)),
+                              ],
+                            ),
+                            Switch(
+                              value: beniHatirla,
+                              activeColor: Colors.white,
+                              activeTrackColor: primaryGreen,
+                              inactiveThumbColor: Colors.grey.shade400,
+                              inactiveTrackColor: Colors.grey.shade800,
+                              onChanged: (deger) => setModalState(() => beniHatirla = deger),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+
+                      // Güncelle Butonu (Senin Hive Kaydetme Mantığın)
+                      SizedBox(
+                        width: double.infinity,
+                        height: 54,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            if (adController.text.isNotEmpty && pinController.text.length >= 4) {
+                              kullanici.adSoyad = adController.text.trim();
+                              kullanici.cinsiyet = secilenCinsiyet;
+                              kullanici.pinKodu = pinController.text;
+                              kullanici.beniHatirla = beniHatirla;
+                              kullanici.save(); // Veritabanı güncellendi
+                              
+                              Navigator.pop(context);
+                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                                content: Text('Profil başarıyla güncellendi!', style: TextStyle(color: Colors.white)), 
+                                backgroundColor: Colors.green
+                              ));
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: primaryGreen,
+                            foregroundColor: inputBgColor,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          ),
+                          child: const Text('Değişiklikleri Kaydet', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Çıkış Yap Butonu (Senin Hesabı Sıfırlama Mantığın)
+                      SizedBox(
+                        width: double.infinity,
+                        height: 54,
+                        child: OutlinedButton.icon(
+                          onPressed: () async {
+                            Navigator.pop(context); // Menüyü kapat
+                            await box.clear(); // Veritabanını sıfırla
+                            
+                            if (context.mounted) {
+                              Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
+                                MaterialPageRoute(builder: (context) => const ProfilKayitEkrani()), 
+                                (route) => false,
+                              );
+                            }
+                          },
+                          icon: Icon(Icons.logout_rounded, color: dangerRed, size: 20),
+                          label: Text('Hesabı Sıfırla ve Çıkış Yap', style: TextStyle(color: dangerRed, fontSize: 15, fontWeight: FontWeight.w600)),
+                          style: OutlinedButton.styleFrom(
+                            backgroundColor: dangerRed.withOpacity(0.05),
+                            side: BorderSide(color: dangerRed.withOpacity(0.3), width: 1.5),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: adController,
-                    style: TextStyle(color: textLight),
-                    decoration: InputDecoration(labelText: 'Adınız Soyadınız', labelStyle: TextStyle(color: textMuted), prefixIcon: Icon(Icons.person, color: textMuted), filled: true, fillColor: bgColor, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none)),
-                  ),
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<String>(
-                    value: secilenCinsiyet,
-                    dropdownColor: bgColor,
-                    style: TextStyle(color: textLight),
-                    decoration: InputDecoration(labelText: 'Hitap (Cinsiyet)', filled: true, fillColor: bgColor, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none)),
-                    items: ['Erkek', 'Kadın'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
-                    onChanged: (val) => setModalState(() => secilenCinsiyet = val!),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: pinController,
-                    keyboardType: TextInputType.number,
-                    maxLength: 6,
-                    style: TextStyle(color: textLight),
-                    decoration: InputDecoration(labelText: 'Güvenlik PIN Kodu', labelStyle: TextStyle(color: textMuted), prefixIcon: Icon(Icons.lock, color: textMuted), filled: true, fillColor: bgColor, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none)),
-                  ),
-                  SwitchListTile(
-                    title: Text('Beni Hatırla (Oto Giriş)', style: TextStyle(color: textLight, fontSize: 14)),
-                    activeColor: primaryGreen,
-                    contentPadding: EdgeInsets.zero,
-                    value: beniHatirla,
-                    onChanged: (val) => setModalState(() => beniHatirla = val),
-                  ),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        if (adController.text.isNotEmpty && pinController.text.length >= 4) {
-                          kullanici.adSoyad = adController.text.trim();
-                          kullanici.cinsiyet = secilenCinsiyet;
-                          kullanici.pinKodu = pinController.text;
-                          kullanici.beniHatirla = beniHatirla;
-                          kullanici.save(); // Veritabanını güncelledik
-                          Navigator.pop(context);
-                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profil başarıyla güncellendi!', style: TextStyle(color: Colors.white)), backgroundColor: Colors.green));
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(backgroundColor: primaryGreen, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-                      child: const Text('Güncelle', style: TextStyle(color: Color(0xFF0B131E), fontWeight: FontWeight.bold)),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: () async {
-                        // 1. Önce menüyü aşağı indirip kapatıyoruz
-                        Navigator.pop(context); 
-                        
-                        // 2. Veritabanındaki profili tamamen temizliyoruz (sıfırlıyoruz)
-                        await box.clear(); 
-                        
-                        // 3. Bizi kesin olarak en baştaki Kayıt Ekranına fırlatıyor
-                        if (context.mounted) {
-                          Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
-                            MaterialPageRoute(builder: (context) => const ProfilKayitEkrani()), 
-                            (route) => false,
-                          );
-                        }
-                      },
-                      style: OutlinedButton.styleFrom(side: BorderSide(color: Colors.redAccent.withOpacity(0.5)), padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-                      icon: const Icon(Icons.logout, color: Colors.redAccent, size: 18),
-                      label: const Text('Hesabı Sıfırla ve Çıkış Yap', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                ],
+                ),
               ),
-            ),
-          );
-        });
-      }
+            );
+          },
+        );
+      },
     );
   }
 
-  Widget _buildGreeting() {
+ Widget _buildGreeting() {
     final kullaniciBox = Hive.box<Kullanici>('kullanici_kutusu');
     final kullanici = kullaniciBox.get('profil');
     String isim = kullanici?.adSoyad.split(' ').first ?? 'Misafir';
@@ -261,7 +396,7 @@ Widget _buildHeader(BuildContext context) {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('Merhaba, $isim$unvan 👋', style: TextStyle(color: textLight, fontSize: 24, fontWeight: FontWeight.bold)),
+            Text('Merhaba, $isim $unvan 👋', style: TextStyle(color: textLight, fontSize: 24, fontWeight: FontWeight.bold)),
             
             // ARTI BUTONU ARTIK TIKLANABİLİR VE HIZLI EKLE MENÜSÜNÜ AÇIYOR
             InkWell(
@@ -280,6 +415,7 @@ Widget _buildHeader(BuildContext context) {
             children: [
               Icon(Icons.lock_outline, color: primaryGreen, size: 14),
               const SizedBox(width: 8),
+              // Hata giderildi: Değişken adı ve metin arasına boşluk/nokta eklendi
               Text('Son yerel eşleme: Bugün, $anlikSaat • Cihaz İçi S...', style: TextStyle(color: primaryGreen, fontSize: 11)),
               const SizedBox(width: 8),
               Text('Aktif', style: TextStyle(color: primaryGreen, fontSize: 11, fontWeight: FontWeight.bold)),
@@ -415,7 +551,7 @@ Widget _buildHeader(BuildContext context) {
     );
   }
 
-  Widget _buildUpcomingAppointment() {
+ Widget _buildUpcomingAppointment() {
     final randevuKutusu = Hive.box<Randevu>('randevular');
     final simdi = DateTime.now();
     var gelecekRandevular = randevuKutusu.values.where((r) => r.randevuTarihi.isAfter(simdi)).toList();
@@ -430,73 +566,249 @@ Widget _buildHeader(BuildContext context) {
       children: [
         _buildSectionTitle('Yaklaşan Randevunuz', kalanGun == 0 ? 'Bugün' : '$kalanGun Gün Kaldı', badgeColor: primaryOrange),
         const SizedBox(height: 12),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(16)),
-          child: Column(
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Stack(
-                    children: [
-                      CircleAvatar(backgroundColor: primaryGreen.withOpacity(0.2), radius: 24, child: Icon(Icons.person, color: primaryGreen, size: 28)),
-                      Positioned(bottom: 0, right: 0, child: Container(decoration: BoxDecoration(color: bgColor, shape: BoxShape.circle), child: Icon(Icons.check_circle, color: primaryGreen, size: 16))),
-                    ],
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+        // KARTI TIKLANABİLİR YAPAN İNKWELL
+        InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () {
+            Navigator.push(context, MaterialPageRoute(builder: (context) => RandevularSayfasi()));
+          },
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(16)),
+            child: Column(
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Stack(
                       children: [
-                        Row(
-                          children: [
-                            Expanded(child: Text(siradaki.doktorAd, style: TextStyle(color: textLight, fontSize: 15, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis)),
-                            const SizedBox(width: 8),
-                            Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2), decoration: BoxDecoration(color: primaryGreen.withOpacity(0.2), borderRadius: BorderRadius.circular(4)), child: Text('Kayıtlı', style: TextStyle(color: primaryGreen, fontSize: 10))),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        Text(siradaki.hastaneAd, style: TextStyle(color: primaryGreen, fontSize: 12)),
+                        CircleAvatar(backgroundColor: primaryGreen.withOpacity(0.2), radius: 24, child: Icon(Icons.person, color: primaryGreen, size: 28)),
+                        Positioned(bottom: 0, right: 0, child: Container(decoration: BoxDecoration(color: bgColor, shape: BoxShape.circle), child: Icon(Icons.check_circle, color: primaryGreen, size: 16))),
                       ],
                     ),
-                  )
-                ],
-              ),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(color: bgColor, borderRadius: BorderRadius.circular(12)),
-                child: Row(
-                  children: [
-                    Icon(Icons.calendar_month, color: primaryBlue, size: 20),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(DateFormat('dd MMMM yyyy, EEEE', 'tr_TR').format(siradaki.randevuTarihi), style: TextStyle(color: textLight, fontSize: 13, fontWeight: FontWeight.bold)),
-                          Text('Saat: ${DateFormat('HH:mm').format(siradaki.randevuTarihi)}', style: TextStyle(color: textMuted, fontSize: 11)),
+                          Row(
+                            children: [
+                              Expanded(child: Text(siradaki.doktorAd, style: TextStyle(color: textLight, fontSize: 15, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis)),
+                              const SizedBox(width: 8),
+                              Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2), decoration: BoxDecoration(color: primaryGreen.withOpacity(0.2), borderRadius: BorderRadius.circular(4)), child: Text('Kayıtlı', style: TextStyle(color: primaryGreen, fontSize: 10))),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(siradaki.hastaneAd, style: TextStyle(color: primaryGreen, fontSize: 12)),
                         ],
                       ),
-                    ),
-                    Icon(Icons.alarm, color: textMuted, size: 20),
+                    )
                   ],
                 ),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  _buildActionButton(Icons.edit_note, 'Soru Notu'),
-                  _buildActionButton(Icons.calendar_today, 'Takvim'),
-                  _buildActionButton(Icons.navigation_outlined, 'Yol Tarifi'),
-                ],
-              )
-            ],
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(color: bgColor, borderRadius: BorderRadius.circular(12)),
+                  child: Row(
+                    children: [
+                      Icon(Icons.calendar_month, color: primaryBlue, size: 20),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(DateFormat('dd MMMM yyyy, EEEE', 'tr_TR').format(siradaki.randevuTarihi), style: TextStyle(color: textLight, fontSize: 13, fontWeight: FontWeight.bold)),
+                            Text('Saat: ${DateFormat('HH:mm').format(siradaki.randevuTarihi)}', style: TextStyle(color: textMuted, fontSize: 11)),
+                          ],
+                        ),
+                      ),
+                      Icon(Icons.alarm, color: textMuted, size: 20),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                // SORU NOTU VE TAKVİM BUTONLARI İŞLEVSEL HALE GETİRİLDİ
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => _soruNotuModaliniAc(context, siradaki),
+                        icon: Icon(Icons.edit_note, color: textLight, size: 18),
+                        label: Text('Soru Notu', style: TextStyle(color: textLight, fontSize: 13)),
+                        style: OutlinedButton.styleFrom(
+                          backgroundColor: bgColor,
+                          side: BorderSide(color: textMuted.withOpacity(0.3)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => _takvimDetayModaliniAc(context, siradaki),
+                        icon: Icon(Icons.calendar_today, color: textLight, size: 18),
+                        label: Text('Takvim', style: TextStyle(color: textLight, fontSize: 13)),
+                        style: OutlinedButton.styleFrom(
+                          backgroundColor: bgColor,
+                          side: BorderSide(color: textMuted.withOpacity(0.3)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                      ),
+                    ),
+                  ],
+                )
+              ],
+            ),
           ),
         )
       ],
+    );
+  }
+
+  // --- 1. SORU NOTU MODALI ---
+  // --- 1. SORU NOTU MODALI ---
+  void _soruNotuModaliniAc(BuildContext context, Randevu randevu) {
+    // Eğer önceden kaydedilmiş bir not varsa (modelinde 'notlar' veya 'soruNotu' diye geçiyorsa onu kullan), 
+    // TextField'ın içine otomatik getiriyoruz.
+    // Not: Eğer Randevu modelinde 'notlar' diye bir alan yoksa, modeline (randevu_model.dart) eklemen gerekebilir.
+    final soruController = TextEditingController(text: randevu.notlar ?? '');
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: cardColor,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 20, right: 20, top: 20),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Hekime Sorulacaklar', style: TextStyle(color: textLight, fontSize: 18, fontWeight: FontWeight.bold)),
+                    IconButton(icon: Icon(Icons.close, color: textMuted), onPressed: () => Navigator.pop(context))
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text('${randevu.doktorAd} randevunuz için sormak istediğiniz soruları not edin.', style: TextStyle(color: textMuted, fontSize: 12)),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: soruController,
+                  style: TextStyle(color: textLight),
+                  maxLines: 4,
+                  decoration: InputDecoration(
+                    labelText: 'Sorunuzu buraya yazın...',
+                    labelStyle: TextStyle(color: textMuted),
+                    filled: true,
+                    fillColor: bgColor,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      // HİVE VERİTABANINA KAYDETME İŞLEMİ
+                      randevu.notlar = soruController.text; // Modelindeki alan adı 'notlar' ise
+                      randevu.save(); // Değişikliği veritabanına kalıcı olarak yaz
+
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Soru notunuz başarıyla kaydedildi!')),
+                      );
+                    },
+                    icon: const Icon(Icons.save),
+                    label: const Text('Notu Kaydet', style: TextStyle(fontWeight: FontWeight.bold)),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      backgroundColor: primaryGreen,
+                      foregroundColor: bgColor,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // --- 2. TAKVİM DETAY MODALI ---
+  void _takvimDetayModaliniAc(BuildContext context, Randevu randevu) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: cardColor,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Randevu Takvim Detayı', style: TextStyle(color: textLight, fontSize: 18, fontWeight: FontWeight.bold)),
+                  IconButton(icon: Icon(Icons.close, color: textMuted), onPressed: () => Navigator.pop(context))
+                ],
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(color: bgColor, borderRadius: BorderRadius.circular(16)),
+                child: Column(
+                  children: [
+                    ListTile(
+                      leading: Icon(Icons.medical_services, color: primaryGreen),
+                      title: Text('Doktor / Bölüm', style: TextStyle(color: textMuted, fontSize: 11)),
+                      subtitle: Text(randevu.doktorAd, style: TextStyle(color: textLight, fontSize: 14, fontWeight: FontWeight.bold)),
+                    ),
+                    const Divider(color: Colors.white10),
+                    ListTile(
+                      leading: Icon(Icons.local_hospital, color: primaryOrange),
+                      title: Text('Kurum', style: TextStyle(color: textMuted, fontSize: 11)),
+                      subtitle: Text(randevu.hastaneAd, style: TextStyle(color: textLight, fontSize: 14, fontWeight: FontWeight.bold)),
+                    ),
+                    const Divider(color: Colors.white10),
+                    ListTile(
+                      leading: Icon(Icons.calendar_month, color: primaryBlue),
+                      title: Text('Tarih ve Saat', style: TextStyle(color: textMuted, fontSize: 11)),
+                      subtitle: Text('${DateFormat('dd MMMM yyyy, EEEE - HH:mm', 'tr_TR').format(randevu.randevuTarihi)}', style: TextStyle(color: textLight, fontSize: 14, fontWeight: FontWeight.bold)),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    backgroundColor: primaryBlue,
+                    foregroundColor: textLight,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text('Tamam', style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+              ),
+              const SizedBox(height: 20),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -610,7 +922,9 @@ Widget _buildHeader(BuildContext context) {
           decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(16)),
           child: Column(
             children: [
+              // İŞTE SİMETRİYİ SAĞLAYAN ANA ROW BURASI
               Row(
+                crossAxisAlignment: CrossAxisAlignment.center, // Grafik ve yazıları dikeyde tam ortalar
                 children: [
                   SizedBox(
                     width: 60, height: 60,
@@ -619,7 +933,6 @@ Widget _buildHeader(BuildContext context) {
                       children: [
                         ...siraliPoli.take(3).toList().reversed.toList().asMap().entries.map((entry) {
                           int i = entry.key;
-                          // Ters çevirdiğimiz için asıl indeksi bulmamız lazım
                           int realIndex = siraliPoli.length > 3 ? (2 - i) : (siraliPoli.length - 1 - i); 
                           
                           double kumeDeger = 0;
@@ -641,6 +954,7 @@ Widget _buildHeader(BuildContext context) {
                   const SizedBox(width: 24),
                   Expanded(
                     child: Column(
+                      mainAxisSize: MainAxisSize.min, // Yazıların dikeyde gereksiz yayılmasını önler, hizalar
                       children: siraliPoli.take(3).toList().asMap().entries.map((entry) {
                         var poli = entry.value;
                         int yuzde = ((poli.value / toplamZiyaret) * 100).toInt();
@@ -682,51 +996,6 @@ Widget _buildHeader(BuildContext context) {
           ),
         )
       ],
-    );
-  }
-
-  Widget _buildAIAssistantCard(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: primaryOrange, width: 1.5),
-        boxShadow: [BoxShadow(color: primaryOrange.withOpacity(0.1), blurRadius: 20, spreadRadius: 0)],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.auto_awesome, color: primaryOrange, size: 20),
-                  const SizedBox(width: 8),
-                  Text('AI KLİNİK ASİSTAN', style: TextStyle(color: textLight, fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 1)),
-                ],
-              ),
-              Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4), decoration: BoxDecoration(color: primaryOrange.withOpacity(0.2), borderRadius: BorderRadius.circular(12)), child: Text('Akıllı Analiz', style: TextStyle(color: primaryOrange, fontSize: 10, fontWeight: FontWeight.bold))),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Text('"Sisteme girdiğiniz randevunuz ve son tahlil sonuçlarınıza göre doktorunuza sormak isteyebileceğiniz soruları hazırlayabilirim."', style: TextStyle(color: textMuted, fontSize: 13, height: 1.4, fontStyle: FontStyle.italic)),
-          const SizedBox(height: 20),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: () {
-                // AI Sayfasına Yönlendirme
-                Navigator.push(context, MaterialPageRoute(builder: (context) => const YapayZekaSayfasi()));
-              },
-              style: ElevatedButton.styleFrom(backgroundColor: primaryOrange.withOpacity(0.15), foregroundColor: primaryOrange, padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-              icon: const Icon(Icons.arrow_back_ios, size: 14),
-              label: const Text('Yapay Zeka İle Randevuya\nHazırlan', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-            ),
-          )
-        ],
-      ),
     );
   }
   // --- HIZLI EKLE MENÜSÜ VE MİNİ FORMLAR ---
@@ -918,119 +1187,182 @@ Widget _buildHeader(BuildContext context) {
   }
   // --- BİLDİRİM MERKEZİ FONKSİYONLARI ---
 
-  int _aktifBildirimSayisiHesapla() {
-    int sayac = 0;
+int _aktifBildirimSayisiHesapla() {
     final ilaclar = Hive.box<Ilac>('ilaclar').values;
     final randevular = Hive.box<Randevu>('randevular').values;
+    final gizliKutu = Hive.box('gizlenenBildirimler');
     final simdi = DateTime.now();
+    int sayi = 0;
 
-    // 1. Alınmamış İlaçlar & Kritik Stok
-    for (var ilac in ilaclar) {
-      if (!ilac.alindiMi) sayac++;
-      if (ilac.kalanMiktar <= 5) sayac++;
+    for (var ilac in ilaclar.where((i) => i.kalanMiktar <= 5)) {
+      if (!gizliKutu.containsKey('stok_${ilac.ad}')) sayi++;
     }
 
-    // 2. Yaklaşan Randevular (Önümüzdeki 3 gün)
+    for (var ilac in ilaclar.where((i) => !i.alindiMi)) {
+      if (!gizliKutu.containsKey('ilac_${ilac.ad}_${ilac.saat}')) sayi++;
+    }
+
     for (var randevu in randevular) {
       if (randevu.randevuTarihi.isAfter(simdi) && randevu.randevuTarihi.difference(simdi).inDays <= 3) {
-        sayac++;
+        if (!gizliKutu.containsKey('randevu_${randevu.doktorAd}_${randevu.randevuTarihi}')) sayi++;
       }
     }
-    return sayac;
+
+    return sayi;
   }
 
   void _bildirimMenusuAc(BuildContext context) {
-    final ilaclar = Hive.box<Ilac>('ilaclar').values;
-    final randevular = Hive.box<Randevu>('randevular').values;
-    final simdi = DateTime.now();
-    
-    List<Widget> bildirimKartlari = [];
-
-    // Kritik Stok Bildirimleri
-    for (var ilac in ilaclar.where((i) => i.kalanMiktar <= 5)) {
-      bildirimKartlari.add(_buildBildirimKarti(Icons.warning_amber_rounded, Colors.redAccent, 'Kritik İlaç Stoku', '${ilac.ad} adlı ilacınızdan sadece ${ilac.kalanMiktar} adet kaldı. Lütfen reçetenizi yenileyin.'));
-    }
-
-    // Alınmamış İlaç Bildirimleri
-    for (var ilac in ilaclar.where((i) => !i.alindiMi)) {
-      bildirimKartlari.add(_buildBildirimKarti(Icons.access_time, primaryOrange, 'İlaç Saati Geldi', '${ilac.zamanDilimi} dozu olan ${ilac.ad} henüz alınmadı. Lütfen ilacınızı içiniz.'));
-    }
-
-    // Yaklaşan Randevu Bildirimleri
-    for (var randevu in randevular) {
-      if (randevu.randevuTarihi.isAfter(simdi) && randevu.randevuTarihi.difference(simdi).inDays <= 3) {
-        int gunKald = randevu.randevuTarihi.difference(simdi).inDays;
-        String zamanMetni = gunKald == 0 ? 'Bugün' : '$gunKald gün sonra';
-        bildirimKartlari.add(_buildBildirimKarti(Icons.calendar_month, primaryBlue, 'Yaklaşan Randevu', '$zamanMetni ${randevu.doktorAd} ile ${randevu.hastaneAd} randevunuz var.'));
-      }
-    }
-
-    if (bildirimKartlari.isEmpty) {
-      bildirimKartlari.add(
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 40),
-          child: Center(child: Text('Şu an için yeni bir bildiriminiz yok.', style: TextStyle(color: textMuted))),
-        )
-      );
-    }
-
     showModalBottomSheet(
       context: context,
       backgroundColor: cardColor,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (context) {
-        return Container(
-          constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.7),
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(width: 40, height: 4, decoration: BoxDecoration(color: textMuted.withOpacity(0.3), borderRadius: BorderRadius.circular(2))),
-              const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('Bildirim Merkezi', style: TextStyle(color: textLight, fontSize: 18, fontWeight: FontWeight.bold)),
-                  Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4), decoration: BoxDecoration(color: primaryGreen.withOpacity(0.2), borderRadius: BorderRadius.circular(12)), child: Text('${bildirimKartlari.length > 1 ? bildirimKartlari.length : _aktifBildirimSayisiHesapla()} Yeni', style: TextStyle(color: primaryGreen, fontSize: 12, fontWeight: FontWeight.bold)))
-                ],
-              ),
-              const SizedBox(height: 20),
-              Expanded(
-                child: ListView(
-                  shrinkWrap: true,
-                  children: bildirimKartlari,
-                ),
-              )
-            ],
-          ),
-        );
-      }
-    );
-  }
+        return StatefulBuilder(builder: (context, setModalState) {
+          final ilaclar = Hive.box<Ilac>('ilaclar').values;
+          final randevular = Hive.box<Randevu>('randevular').values;
+          final gizliKutu = Hive.box('gizlenenBildirimler');
+          final simdi = DateTime.now();
+          
+          List<Widget> bildirimKartlari = [];
 
-  Widget _buildBildirimKarti(IconData icon, Color color, String title, String message) {
+          // 1. Kritik Stok Bildirimleri
+          for (var ilac in ilaclar.where((i) => i.kalanMiktar <= 5)) {
+            String id = 'stok_${ilac.ad}';
+            if (!gizliKutu.containsKey(id)) {
+              bildirimKartlari.add(_buildBildirimKarti(
+                context, Icons.warning_amber_rounded, Colors.redAccent, 'Kritik İlaç Stoku',
+                '${ilac.ad} adlı ilacınızdan sadece ${ilac.kalanMiktar} adet kaldı. Lütfen reçetenizi yenileyin.',
+                onClose: () {
+                  gizliKutu.put(id, true); // Hive'a kalıcı olarak kaydet
+                  setModalState(() {});
+                  setState(() {});
+                },
+              ));
+            }
+          }
+
+          // 2. Alınmamış İlaç Bildirimleri
+          for (var ilac in ilaclar.where((i) => !i.alindiMi)) {
+            String id = 'ilac_${ilac.ad}_${ilac.saat}';
+            if (!gizliKutu.containsKey(id)) {
+              bildirimKartlari.add(_buildBildirimKarti(
+                context, Icons.access_time, primaryOrange, 'İlaç Saati Geldi',
+                '${ilac.zamanDilimi} dozu olan ${ilac.ad} henüz alınmadı. Lütfen ilacınızı içiniz.',
+                onClose: () {
+                  gizliKutu.put(id, true);
+                  setModalState(() {});
+                  setState(() {});
+                },
+              ));
+            }
+          }
+
+          // 3. Yaklaşan Randevu Bildirimleri
+          for (var randevu in randevular) {
+            if (randevu.randevuTarihi.isAfter(simdi) && randevu.randevuTarihi.difference(simdi).inDays <= 3) {
+              int gunKald = randevu.randevuTarihi.difference(simdi).inDays;
+              String zamanMetni = gunKald == 0 ? 'Bugün' : '$gunKald gün sonra';
+              String id = 'randevu_${randevu.doktorAd}_${randevu.randevuTarihi}';
+              
+              if (!gizliKutu.containsKey(id)) {
+                bildirimKartlari.add(_buildBildirimKarti(
+                  context, Icons.calendar_month, primaryBlue, 'Yaklaşan Randevu',
+                  '$zamanMetni ${randevu.doktorAd} ile ${randevu.hastaneAd} randevunuz var.',
+                  onClose: () {
+                    gizliKutu.put(id, true);
+                    setModalState(() {});
+                    setState(() {});
+                  },
+                ));
+              }
+            }
+          }
+
+          bool bosMu = bildirimKartlari.isEmpty;
+
+          if (bosMu) {
+            bildirimKartlari.add(
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 40),
+                child: Center(child: Text('Şu an için yeni bir bildiriminiz yok.', style: TextStyle(color: Color(0xFF8B98A5)))),
+              )
+            );
+          }
+
+          return Container(
+            constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.7),
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(width: 40, height: 4, decoration: BoxDecoration(color: textMuted.withOpacity(0.3), borderRadius: BorderRadius.circular(2))),
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Bildirim Merkezi', style: TextStyle(color: textLight, fontSize: 18, fontWeight: FontWeight.bold)),
+                    if (!bosMu)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4), 
+                        decoration: BoxDecoration(color: primaryGreen.withOpacity(0.2), borderRadius: BorderRadius.circular(12)), 
+                        child: Text('${bildirimKartlari.length} Yeni', style: TextStyle(color: primaryGreen, fontSize: 12, fontWeight: FontWeight.bold))
+                      )
+                  ],
+                ),
+                const SizedBox(height: 20),
+                Expanded(child: ListView(shrinkWrap: true, children: bildirimKartlari))
+              ],
+            ),
+          );
+        });
+      },
+    ).then((_) {
+      setState(() {});
+    });
+  }
+  // Çarpı butonlu yeni bildirim kartı tasarım fonksiyonu
+  Widget _buildBildirimKarti(BuildContext context, IconData ikon, Color renk, baslik, String aciklama, {required VoidCallback onClose}) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: bgColor, borderRadius: BorderRadius.circular(16), border: Border.all(color: color.withOpacity(0.3))),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: renk.withOpacity(0.3)),
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: color.withOpacity(0.15), shape: BoxShape.circle), child: Icon(icon, color: color, size: 20)),
-          const SizedBox(width: 16),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(color: renk.withOpacity(0.15), shape: BoxShape.circle),
+            child: Icon(ikon, color: renk, size: 22),
+          ),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: TextStyle(color: textLight, fontSize: 14, fontWeight: FontWeight.bold)),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(baslik, style: TextStyle(color: textLight, fontSize: 14, fontWeight: FontWeight.bold)),
+                    // SAĞ ÜST KÖŞEDEKİ ÇARPI KAPATMA TUŞU
+                    InkWell(
+                      onTap: onClose,
+                      child: Icon(Icons.close, color: textMuted, size: 18),
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 4),
-                Text(message, style: TextStyle(color: textMuted, fontSize: 12, height: 1.4)),
+                Text(aciklama, style: TextStyle(color: textMuted, fontSize: 12, height: 1.4)),
               ],
             ),
-          )
+          ),
         ],
       ),
     );
   }
+  
 }

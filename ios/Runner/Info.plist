@@ -68,7 +68,7 @@
 		</array>
 		<key>UIStatusBarHidden</key>
 		<false/>
-		  <key>NSFaceIDUsageDescription</key>
-           <string>Sağlık verilerinize erişmek için Face ID gerekiyor.</string>
+		<key>NSFaceIDUsageDescription</key>
+		<string>Sağlık verilerinize erişmek için Face ID gerekiyor.</string>
 	</dict>
 </plist>

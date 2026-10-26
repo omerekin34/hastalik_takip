@@ -22,15 +22,69 @@ class _HastaliklarSayfasiState extends State<HastaliklarSayfasi> {
   final Color textLight = const Color(0xFFFFFFFF);
   final Color textMuted = const Color(0xFF8B98A5);
 
-  // Formu dinamik hale getirdik: Yeni kayıt için boş, düzenleme için dolu açılır
+  // En bilindik 10 poliklinik / branş listesi
+  final List<String> _populerBolumler = [
+    'Dahiliye (İç Hastalıkları)',
+    'Kardiyoloji',
+    'Nöroloji',
+    'Ortopedi ve Travmatoloji',
+    'Göz Hastalıkları',
+    'Kulak Burun Boğaz (KBB)',
+    'Cildiye (Dermatoloji)',
+    'Üroloji',
+    'Kadın Hastalıkları ve Doğum',
+    'Çocuk Sağlığı ve Hastalıkları',
+    'Diğer / Manuel Yaz'
+  ];
+
+  // Sık Karşılaşılan Teşhisler / Hastalık Önerileri
+  final List<String> _populerTeshisler = [
+    'Hipertansiyon (Yüksek Tansiyon)',
+    'Tip 2 Diyabet (Şeker Hastalığı)',
+    'Astım / KOAH',
+    'Migren / Kronik Baş Ağrısı',
+    'Bel / Boyun Fıtığı',
+    'Mide Gastriti / Reflü',
+    'Tiroid (Guatr)',
+    'Romatizma / Eklem Ağrısı',
+    'Kolesterol Yüksekliği',
+    'Diğer / Manuel Yaz'
+  ];
+
   void _kayitFormuAc({Hastalik? varOlanHastalik}) {
-    final adController = TextEditingController(text: varOlanHastalik?.ad ?? '');
-    final poliklinikController = TextEditingController(text: varOlanHastalik?.poliklinik ?? '');
     final doktorController = TextEditingController(text: varOlanHastalik?.doktor ?? '');
     final hastaneController = TextEditingController(text: varOlanHastalik?.hastane ?? '');
     final notlarController = TextEditingController(text: varOlanHastalik?.notlar ?? '');
     final ilaclarController = TextEditingController(text: varOlanHastalik?.ilaclar.join(', ') ?? '');
+    
+    final manuelAdController = TextEditingController();
+    final manuelPoliklinikController = TextEditingController();
+
+    String? seciliAd = varOlanHastalik?.ad;
+    bool manuelAdModu = false;
+
+    String? seciliPoliklinik = varOlanHastalik?.poliklinik;
+    bool manuelPoliklinikModu = false;
+
     String seciliDurum = varOlanHastalik?.durum ?? 'Aktif Tedavi';
+
+    // Hastalık adı eşleşme kontrolü
+    if (seciliAd != null && seciliAd.isNotEmpty) {
+      if (!_populerTeshisler.contains(seciliAd)) {
+        seciliAd = 'Diğer / Manuel Yaz';
+        manuelAdModu = true;
+        manuelAdController.text = varOlanHastalik?.ad ?? '';
+      }
+    }
+
+    // Poliklinik eşleşme kontrolü
+    if (seciliPoliklinik != null && seciliPoliklinik.isNotEmpty) {
+      if (!_populerBolumler.contains(seciliPoliklinik)) {
+        seciliPoliklinik = 'Diğer / Manuel Yaz';
+        manuelPoliklinikModu = true;
+        manuelPoliklinikController.text = varOlanHastalik?.poliklinik ?? '';
+      }
+    }
 
     showModalBottomSheet(
       context: context,
@@ -44,6 +98,7 @@ class _HastaliklarSayfasiState extends State<HastaliklarSayfasi> {
             child: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -53,32 +108,106 @@ class _HastaliklarSayfasiState extends State<HastaliklarSayfasi> {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  _buildTextField(adController, 'Hastalık / Teşhis Adı', Icons.medical_services),
-                  _buildTextField(poliklinikController, 'Poliklinik (Örn: Üroloji)', Icons.domain),
+                  
+                  // HASTALIK / TEŞHİS SEÇİMİ (Açılır Menü + Manuel)
+                  DropdownButtonFormField<String>(
+                    value: seciliAd,
+                    dropdownColor: cardColor,
+                    style: TextStyle(color: textLight),
+                    decoration: InputDecoration(
+                      labelText: 'Hastalık / Teşhis Seçin',
+                      labelStyle: TextStyle(color: textMuted),
+                      prefixIcon: Icon(Icons.medical_services, color: primaryGreen),
+                      filled: true,
+                      fillColor: bgColor,
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none)
+                    ),
+                    items: _populerTeshisler.map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
+                    onChanged: (val) {
+                      setModalState(() {
+                        seciliAd = val;
+                        if (val == 'Diğer / Manuel Yaz') {
+                          manuelAdModu = true;
+                        } else {
+                          manuelAdModu = false;
+                        }
+                      });
+                    },
+                  ),
+
+                  if (manuelAdModu) ...[
+                    const SizedBox(height: 10),
+                    _buildTextField(manuelAdController, 'Teşhis Adını Kendiniz Yazın', Icons.edit),
+                  ],
+                  const SizedBox(height: 12),
+
+                  // POLİKLİNİK SEÇİMİ (Açılır Menü + Manuel)
+                  DropdownButtonFormField<String>(
+                    value: seciliPoliklinik,
+                    dropdownColor: cardColor,
+                    style: TextStyle(color: textLight),
+                    decoration: InputDecoration(
+                      labelText: 'Poliklinik / Bölüm Seçin',
+                      labelStyle: TextStyle(color: textMuted),
+                      prefixIcon: Icon(Icons.domain, color: primaryBlue),
+                      filled: true,
+                      fillColor: bgColor,
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none)
+                    ),
+                    items: _populerBolumler.map((b) => DropdownMenuItem(value: b, child: Text(b))).toList(),
+                    onChanged: (val) {
+                      setModalState(() {
+                        seciliPoliklinik = val;
+                        if (val == 'Diğer / Manuel Yaz') {
+                          manuelPoliklinikModu = true;
+                        } else {
+                          manuelPoliklinikModu = false;
+                        }
+                      });
+                    },
+                  ),
+
+                  if (manuelPoliklinikModu) ...[
+                    const SizedBox(height: 10),
+                    _buildTextField(manuelPoliklinikController, 'Poliklinik Adını Kendiniz Yazın', Icons.edit),
+                  ],
+                  const SizedBox(height: 12),
+
                   DropdownButtonFormField<String>(
                     value: seciliDurum,
-                    dropdownColor: bgColor,
+                    dropdownColor: cardColor,
                     style: TextStyle(color: textLight),
-                    decoration: InputDecoration(filled: true, fillColor: bgColor, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none)),
+                    decoration: InputDecoration(
+                      labelText: 'Tedavi Durumu',
+                      labelStyle: TextStyle(color: textMuted),
+                      prefixIcon: Icon(Icons.info, color: primaryOrange),
+                      filled: true, 
+                      fillColor: bgColor, 
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none)
+                    ),
                     items: ['Aktif Tedavi', 'Kronik', 'Geçmiş / İyileşti'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
                     onChanged: (val) => setModalState(() => seciliDurum = val!),
                   ),
                   const SizedBox(height: 12),
+
                   _buildTextField(doktorController, 'Doktor Adı', Icons.person),
                   _buildTextField(hastaneController, 'Hastane', Icons.local_hospital),
                   _buildTextField(notlarController, 'Doktor Notu / Açıklama', Icons.edit_note, maxLines: 3),
                   _buildTextField(ilaclarController, 'İlaçlar (Virgülle ayırın)', Icons.medication),
                   const SizedBox(height: 16),
+                  
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed: () {
-                        if (adController.text.isNotEmpty) {
+                        String finalAd = manuelAdModu ? manuelAdController.text : (seciliAd ?? 'Genel Teşhis');
+                        String finalPoliklinik = manuelPoliklinikModu ? manuelPoliklinikController.text : (seciliPoliklinik ?? 'Genel');
+
+                        if (finalAd.isNotEmpty) {
                           if (varOlanHastalik == null) {
-                            // YENİ KAYIT
                             final yeniKayit = Hastalik(
-                              ad: adController.text,
-                              poliklinik: poliklinikController.text.isEmpty ? 'Genel' : poliklinikController.text,
+                              ad: finalAd,
+                              poliklinik: finalPoliklinik.isEmpty ? 'Genel' : finalPoliklinik,
                               durum: seciliDurum,
                               doktor: doktorController.text,
                               hastane: hastaneController.text,
@@ -88,17 +217,20 @@ class _HastaliklarSayfasiState extends State<HastaliklarSayfasi> {
                             );
                             _hastalikKutusu.add(yeniKayit);
                           } else {
-                            // GÜNCELLEME
-                            varOlanHastalik.ad = adController.text;
-                            varOlanHastalik.poliklinik = poliklinikController.text.isEmpty ? 'Genel' : poliklinikController.text;
+                            varOlanHastalik.ad = finalAd;
+                            varOlanHastalik.poliklinik = finalPoliklinik.isEmpty ? 'Genel' : finalPoliklinik;
                             varOlanHastalik.durum = seciliDurum;
                             varOlanHastalik.doktor = doktorController.text;
                             varOlanHastalik.hastane = hastaneController.text;
                             varOlanHastalik.notlar = notlarController.text;
                             varOlanHastalik.ilaclar = ilaclarController.text.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
-                            varOlanHastalik.save(); // Değişiklikleri veritabanına yaz
+                            varOlanHastalik.save();
                           }
                           Navigator.pop(context);
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Lütfen hastalık veya teşhis adını boş bırakmayın!')),
+                          );
                         }
                       },
                       style: ElevatedButton.styleFrom(backgroundColor: primaryGreen, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
@@ -135,6 +267,7 @@ class _HastaliklarSayfasiState extends State<HastaliklarSayfasi> {
   }
 
   @override
+ @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: bgColor,
@@ -146,24 +279,47 @@ class _HastaliklarSayfasiState extends State<HastaliklarSayfasi> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // --- 1. YENİ DÜZENLENEN ÜST KISIM (Geri Butonu, Başlık ve Hastalık Ekle Butonu) ---
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Hastalık & Ziyaret\nGeçmişi', style: TextStyle(color: textLight, fontSize: 24, fontWeight: FontWeight.bold, height: 1.2)),
-                          const SizedBox(height: 6),
-                          Text('Klinik kayıtlarınız, hekim notları', style: TextStyle(color: textMuted, fontSize: 12)),
-                        ],
+                      IconButton(
+                        icon: Icon(Icons.arrow_back_ios_new, color: textLight, size: 20),
+                        onPressed: () => Navigator.pop(context),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
                       ),
-                      InkWell(
-                        onTap: () => _kayitFormuAc(),
-                        child: CircleAvatar(backgroundColor: primaryGreen, radius: 20, child: Icon(Icons.add, color: bgColor)),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Hastalık & Ziyaret\nGeçmişi', style: TextStyle(color: textLight, fontSize: 20, fontWeight: FontWeight.bold, height: 1.2)),
+                            const SizedBox(height: 4),
+                            Text('Klinik kayıtlarınız, hekim notları', style: TextStyle(color: textMuted, fontSize: 11)),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      ElevatedButton.icon(
+                        onPressed: () => _kayitFormuAc(), // Senin orjinal fonksiyonun
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: primaryGreen.withOpacity(0.2), 
+                          foregroundColor: primaryGreen, 
+                          elevation: 0, 
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)), 
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8)
+                        ),
+                        icon: const Icon(Icons.add, size: 16),
+                        label: const Text('Hastalık Ekle', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                       )
                     ],
                   ),
+                  // --------------------------------------------------------------------------------
+                  
                   const SizedBox(height: 16),
+                  
+                  // --- 2. FİLTRE BUTONLARI (Aynen korundu) ---
                   SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: Row(
@@ -178,19 +334,11 @@ class _HastaliklarSayfasiState extends State<HastaliklarSayfasi> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: () => _kayitFormuAc(),
-                      style: OutlinedButton.styleFrom(side: BorderSide(color: primaryGreen.withOpacity(0.5)), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), padding: const EdgeInsets.symmetric(vertical: 14), backgroundColor: primaryGreen.withOpacity(0.05)),
-                      icon: Icon(Icons.add_circle_outline, color: primaryGreen, size: 18),
-                      label: Text('Yeni Ziyaret / Hastalık Ekle', style: TextStyle(color: primaryGreen, fontSize: 14, fontWeight: FontWeight.bold)),
-                    ),
-                  ),
                 ],
               ),
             ),
+            
+            // --- 3. DİNAMİK LİSTE KISMI ---
             Expanded(
               child: ValueListenableBuilder(
                 valueListenable: _hastalikKutusu.listenable(),
@@ -261,7 +409,6 @@ class _HastaliklarSayfasiState extends State<HastaliklarSayfasi> {
                   Text(hastalik.durum, style: TextStyle(color: durumRengi, fontSize: 12, fontWeight: FontWeight.bold)),
                 ],
               ),
-              // DÜZENLE VE SİL BUTONLARI BURADA YAN YANA
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [

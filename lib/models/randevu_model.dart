@@ -16,10 +16,14 @@ class Randevu extends HiveObject {
   @HiveField(3)
   bool bildirimAcikMi;
 
+  @HiveField(4)
+  String? notlar;
+
   Randevu({
     required this.doktorAd,
     required this.hastaneAd,
     required this.randevuTarihi,
     this.bildirimAcikMi = true,
+    this.notlar,
   });
 }

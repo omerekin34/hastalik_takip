@@ -4,7 +4,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'models/hastalik_model.dart';
 import 'models/ilac_model.dart';
 import 'models/randevu_model.dart';
-import 'models/kullanici_model.dart'; // EKLENDİ
+import 'models/kullanici_model.dart'; 
 import 'services/bildirim_servisi.dart';
 import 'services/dil_servisi.dart'; 
 import 'screens/ozet_ekrani.dart'; 
@@ -12,8 +12,10 @@ import 'screens/hastaliklar_sayfasi.dart';
 import 'screens/ilaclar_sayfasi.dart';
 import 'screens/randevular_sayfasi.dart';
 import 'screens/raporlar_sayfasi.dart';
-import 'screens/profil_kayit_ekrani.dart'; // EKLENDİ
+import 'screens/profil_kayit_ekrani.dart'; 
 import 'screens/kilit_ekrani.dart'; 
+import 'screens/acilis_ekrani.dart';
+
 
 final ValueNotifier<ThemeMode> temaYoneticisi = ValueNotifier(ThemeMode.dark);
 
@@ -24,12 +26,14 @@ void main() async {
   Hive.registerAdapter(HastalikAdapter());
   Hive.registerAdapter(IlacAdapter());
   Hive.registerAdapter(RandevuAdapter());
-  Hive.registerAdapter(KullaniciAdapter()); // EKLENDİ
+  Hive.registerAdapter(KullaniciAdapter()); 
   
   await Hive.openBox<Hastalik>('hastaliklar');
   await Hive.openBox<Ilac>('ilaclar');
   await Hive.openBox<Randevu>('randevular');
-  await Hive.openBox<Kullanici>('kullanici_kutusu'); // EKLENDİ
+  await Hive.openBox<Kullanici>('kullanici_kutusu'); 
+  await Hive.openBox('gizlenenBildirimler');
+
   
   await BildirimServisi.baslat();
   runApp(const HastalikTakipApp());
@@ -81,26 +85,13 @@ class HastalikTakipApp extends StatelessWidget {
                   elevation: 8,
                 ),
               ),
-              // AKILLI YÖNLENDİRME BAŞLIYOR
-              home: _baslangicEkraniniBelirle(), 
+              // Yönlendirme mantığı AcilisEkrani'ne taşındı
+              home: const AcilisEkrani(), 
             );
           }
         );
       },
     );
-  }
-
-  Widget _baslangicEkraniniBelirle() {
-    var box = Hive.box<Kullanici>('kullanici_kutusu');
-    Kullanici? aktifKullanici = box.get('profil');
-
-    if (aktifKullanici == null) {
-      return const ProfilKayitEkrani(); // Profil yoksa kayıt ol
-    } else if (aktifKullanici.beniHatirla) {
-      return const AnaEkran(); // Beni hatırla açıksa direkt gir
-    } else {
-      return const KilitEkrani(); // Beni hatırla kapalıysa şifre sor
-    }
   }
 }
 

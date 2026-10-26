@@ -3,7 +3,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:intl/intl.dart';
 import '../models/randevu_model.dart';
 import '../services/bildirim_servisi.dart';
-import '../services/ses_servisi.dart'; // Eğer sesli okuma kullanıyorsan
+import '../services/ses_servisi.dart';
 import '../services/dil_servisi.dart';
 
 class RandevularSayfasi extends StatefulWidget {
@@ -24,6 +24,100 @@ class _RandevularSayfasiState extends State<RandevularSayfasi> {
   final Color textLight = const Color(0xFFFFFFFF);
   final Color textMuted = const Color(0xFF8B98A5);
   final Color primaryBlue = const Color(0xFF00A3FF);
+
+  // Türkiye'nin İl, İlçe ve Hastane Verileri (Doğrudan Kod İçinde - Kesin Çözüm)
+  final Map<String, Map<String, List<String>>> _hastaneVeritabani = {
+    "İstanbul": {
+      "Kadıköy": ["İstanbul Medeniyet Üniversitesi Göztepe Prof. Dr. Süleyman Yalçın Şehir Hastanesi", "Özel Acıbadem Hastanesi", "Kadıköy Florence Nightingale Hastanesi"],
+      "Üsküdar": ["Zeynep Kamil Kadın Doğum ve Çocuk Hastalıkları E.A.H.", "Üsküdar Devlet Hastanesi", "Özel Medeniyet Hastanesi"],
+      "Kartal": ["Kartal Dr. Lütfi Kırdar Şehir Hastanesi", "Süreyyapaşa Göğüs Hastalıkları E.A.H.", "Özel Anadolu Hastanesi"],
+      "Şişli": ["Şişli Hamidiye Etfal Eğitim ve Araştırma Hastanesi", "Okmeydanı Prof. Dr. Cemil Taşçıoğlu Şehir Hastanesi", "Özel American Hospital"],
+      "Beşiktaş": ["İstanbul Üniversitesi Cerrahpaşa Prof. Dr. Murat Dilmener Hastanesi", "Özel Acıbadem Fulya Hastanesi"]
+    },
+    "Ankara": {
+      "Çankaya": ["Ankara Şehir Hastanesi", "Hacettepe Üniversitesi Hastaneleri", "Ankara Atatürk Eğitim ve Araştırma Hastanesi"],
+      "Altındağ": ["Dışkapı Yıldırım Beyazıt Eğitim ve Araştırma Hastanesi", "Ankara Numune Hastanesi"],
+      "Yenimahalle": ["Dışkapı Dr. Sami Ulus Kadın Doğum Hastanesi", "Yenimahalle Eğitim ve Araştırma Hastanesi"]
+    },
+    "İzmir": {
+      "Konak": ["İzmir Tepecik Eğitim ve Araştırma Hastanesi", "İzmir Katip Çenede Atatürk E.A.H."],
+      "Bornova": ["Ege Üniversitesi Hastanesi", "Bornova Türkan Özilhan Devlet Hastanesi"],
+      "Bayraklı": ["Bayraklı Şehir Hastanesi"]
+    },
+    "Trabzon": {
+      "Ortahisar": ["Trabzon Kanuni Eğitim ve Araştırma Hastanesi", "Karadeniz Teknik Üniversitesi (KTÜ) Farabi Hastanesi", "Özel Imperial Hastanesi", "Özel Medicalpark Karadeniz Hastanesi"],
+      "Akçaabat": ["Akçaabat Haçkalı Baba Devlet Hastanesi"],
+      "Of": ["Of Devlet Hastanesi"],
+      "Sürmene": ["Sürmene Devlet Hastanesi"],
+      "Araklı": ["Araklı Bayram Halil Devlet Hastanesi"]
+    },
+    "Bursa": {
+      "Osmangazi": ["Bursa Çekirge Devlet Hastanesi", "Bursa Uludağ Üniversitesi Hastanesi"],
+      "Nilüfer": ["Bursa Şehir Hastanesi", "Özel Jimer Hastanesi"]
+    },
+    "Antalya": {
+      "Muratpaşa": ["Antalya Eğitim ve Araştırma Hastanesi", "Akdeniz Üniversitesi Hastanesi"],
+      "Kepez": ["Antalya Kepez Devlet Hastanesi"]
+    }
+  };
+
+  List<String> _iller = [];
+  List<String> _ilceler = [];
+  List<String> _hastaneler = [];
+
+  String? _secilenIl;
+  String? _secilenIlce;
+  String? _secilenHastane;
+
+  // En bilindik 10 poliklinik / branş listesi
+  final List<String> _populerBolumler = [
+    'Dahiliye (İç Hastalıkları)',
+    'Kardiyoloji',
+    'Nöroloji',
+    'Ortopedi ve Travmatoloji',
+    'Göz Hastalıkları',
+    'Kulak Burun Boğaz (KBB)',
+    'Cildiye (Dermatoloji)',
+    'Üroloji',
+    'Kadın Hastalıkları ve Doğum',
+    'Çocuk Sağlığı ve Hastalıkları',
+    'Diğer / Manuel Yaz'
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _iller = _hastaneVeritabani.keys.toList();
+    _iller.sort();
+  }
+
+  void _ilSecildi(String? il) {
+    setState(() {
+      _secilenIl = il;
+      _secilenIlce = null;
+      _secilenHastane = null;
+      _ilceler.clear();
+      _hastaneler.clear();
+
+      if (il != null && _hastaneVeritabani.containsKey(il)) {
+        _ilceler = _hastaneVeritabani[il]!.keys.toList();
+        _ilceler.sort();
+      }
+    });
+  }
+
+  void _ilceSecildi(String? ilce) {
+    setState(() {
+      _secilenIlce = ilce;
+      _secilenHastane = null;
+      _hastaneler.clear();
+
+      if (_secilenIl != null && ilce != null && _hastaneVeritabani[_secilenIl]!.containsKey(ilce)) {
+        _hastaneler = _hastaneVeritabani[_secilenIl]![ilce]!;
+        _hastaneler.sort();
+      }
+    });
+  }
 
   void _sesliOku(List<Randevu> randevular) async {
     if (sesliOkunuyor) { 
@@ -46,8 +140,25 @@ class _RandevularSayfasiState extends State<RandevularSayfasi> {
 
   void _randevuFormuAc({Randevu? varOlanRandevu}) {
     final doktorController = TextEditingController(text: varOlanRandevu?.doktorAd ?? '');
-    final hastaneController = TextEditingController(text: varOlanRandevu?.hastaneAd ?? '');
+    final manuelBolumController = TextEditingController();
+    
+    String? secilenBolum;
+    bool manuelBolumModu = false;
     DateTime secilenTarih = varOlanRandevu?.randevuTarihi ?? DateTime.now().add(const Duration(days: 1));
+
+    if (varOlanRandevu != null) {
+      List<String> parcalar = varOlanRandevu.hastaneAd.split(' - ');
+      if (parcalar.isNotEmpty) _secilenHastane = parcalar[0];
+      if (parcalar.length > 1) {
+        if (_populerBolumler.contains(parcalar[1])) {
+          secilenBolum = parcalar[1];
+        } else {
+          secilenBolum = 'Diğer / Manuel Yaz';
+          manuelBolumModu = true;
+          manuelBolumController.text = parcalar[1];
+        }
+      }
+    }
 
     showModalBottomSheet(
       context: context,
@@ -61,6 +172,7 @@ class _RandevularSayfasiState extends State<RandevularSayfasi> {
             child: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -71,20 +183,90 @@ class _RandevularSayfasiState extends State<RandevularSayfasi> {
                   ),
                   const SizedBox(height: 16),
                   
+                  // Doktor Adı
                   TextField(
                     controller: doktorController,
                     style: TextStyle(color: textLight),
                     decoration: InputDecoration(labelText: 'Doktor Adı (Örn: Dr. Ali Yılmaz)', labelStyle: TextStyle(color: textMuted), prefixIcon: Icon(Icons.person, color: textMuted), filled: true, fillColor: bgColor, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none)),
                   ),
-                  const SizedBox(height: 12),
-                  
-                  TextField(
-                    controller: hastaneController,
+                  const SizedBox(height: 14),
+
+                  // İL SEÇİMİ
+                  DropdownButtonFormField<String>(
+                    dropdownColor: cardColor,
                     style: TextStyle(color: textLight),
-                    decoration: InputDecoration(labelText: 'Hastane & Bölüm (Örn: Şehir Hast. - Üroloji)', labelStyle: TextStyle(color: textMuted), prefixIcon: Icon(Icons.local_hospital, color: textMuted), filled: true, fillColor: bgColor, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none)),
+                    value: _secilenIl,
+                    decoration: InputDecoration(labelText: 'İl Seçin', labelStyle: TextStyle(color: textMuted), prefixIcon: Icon(Icons.location_city, color: primaryGreen), filled: true, fillColor: bgColor, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none)),
+                    items: _iller.map((il) => DropdownMenuItem(value: il, child: Text(il))).toList(),
+                    onChanged: (yeniIl) {
+                      setModalState(() {
+                        _ilSecildi(yeniIl);
+                      });
+                    },
                   ),
+                  const SizedBox(height: 14),
+
+                  // İLÇE SEÇİMİ
+                  DropdownButtonFormField<String>(
+                    dropdownColor: cardColor,
+                    style: TextStyle(color: textLight),
+                    value: _secilenIlce,
+                    decoration: InputDecoration(labelText: 'İlçe Seçin', labelStyle: TextStyle(color: textMuted), prefixIcon: Icon(Icons.map, color: primaryGreen), filled: true, fillColor: bgColor, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none)),
+                    items: _ilceler.map((ilce) => DropdownMenuItem(value: ilce, child: Text(ilce))).toList(),
+                    onChanged: (yeniIlce) {
+                      setModalState(() {
+                        _ilceSecildi(yeniIlce);
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 14),
+
+                  // HASTANE SEÇİMİ
+                  DropdownButtonFormField<String>(
+                    dropdownColor: cardColor,
+                    style: TextStyle(color: textLight),
+                    value: _secilenHastane,
+                    decoration: InputDecoration(labelText: 'Hastane Seçin', labelStyle: TextStyle(color: textMuted), prefixIcon: Icon(Icons.local_hospital, color: primaryGreen), filled: true, fillColor: bgColor, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none)),
+                    items: _hastaneler.map((hastane) => DropdownMenuItem(value: hastane, child: Text(hastane, overflow: TextOverflow.ellipsis))).toList(),
+                    onChanged: (yeniHastane) {
+                      setModalState(() {
+                        _secilenHastane = yeniHastane;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 14),
+
+                  // BÖLÜM / POLİKLİNİK SEÇİMİ
+                  DropdownButtonFormField<String>(
+                    dropdownColor: cardColor,
+                    style: TextStyle(color: textLight),
+                    value: secilenBolum,
+                    decoration: InputDecoration(labelText: 'Poliklinik / Bölüm Seçin', labelStyle: TextStyle(color: textMuted), prefixIcon: Icon(Icons.medical_services, color: primaryOrange), filled: true, fillColor: bgColor, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none)),
+                    items: _populerBolumler.map((bolum) => DropdownMenuItem(value: bolum, child: Text(bolum))).toList(),
+                    onChanged: (yeniBolum) {
+                      setModalState(() {
+                        secilenBolum = yeniBolum;
+                        if (yeniBolum == 'Diğer / Manuel Yaz') {
+                          manuelBolumModu = true;
+                        } else {
+                          manuelBolumModu = false;
+                        }
+                      });
+                    },
+                  ),
+
+                  if (manuelBolumModu) ...[
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: manuelBolumController,
+                      style: TextStyle(color: textLight),
+                      decoration: InputDecoration(labelText: 'Bölüm Adını Kendiniz Yazın', labelStyle: TextStyle(color: textMuted), prefixIcon: Icon(Icons.edit, color: primaryOrange), filled: true, fillColor: bgColor, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none)),
+                    ),
+                  ],
+
                   const SizedBox(height: 16),
                   
+                  // Tarih ve Saat Seçici
                   ListTile(
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), 
                     tileColor: bgColor,
@@ -109,30 +291,36 @@ class _RandevularSayfasiState extends State<RandevularSayfasi> {
                   ),
                   const SizedBox(height: 24),
                   
+                  // KAYDET / GÜNCELLE BUTONU
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
                       onPressed: () async {
-                        if (doktorController.text.isNotEmpty && hastaneController.text.isNotEmpty) {
+                        if (doktorController.text.isNotEmpty && _secilenHastane != null && secilenBolum != null) {
+                          String finalBolum = manuelBolumModu ? manuelBolumController.text : secilenBolum!;
+                          String birlesikHastaneAdi = "$_secilenHastane - $finalBolum";
+
                           if (varOlanRandevu == null) {
-                            // YENİ KAYIT
-                            int yeniId = await _randevuKutusu.add(Randevu(doktorAd: doktorController.text, hastaneAd: hastaneController.text, randevuTarihi: secilenTarih));
-                            await BildirimServisi.randevuHatirlaticiKur(yeniId, doktorController.text, hastaneController.text, secilenTarih); 
+                            int yeniId = await _randevuKutusu.add(Randevu(doktorAd: doktorController.text, hastaneAd: birlesikHastaneAdi, randevuTarihi: secilenTarih));
+                            await BildirimServisi.randevuHatirlaticiKur(yeniId, doktorController.text, birlesikHastaneAdi, secilenTarih); 
                           } else {
-                            // GÜNCELLEME
                             varOlanRandevu.doktorAd = doktorController.text;
-                            varOlanRandevu.hastaneAd = hastaneController.text;
+                            varOlanRandevu.hastaneAd = birlesikHastaneAdi;
                             varOlanRandevu.randevuTarihi = secilenTarih;
                             varOlanRandevu.save();
-                            await BildirimServisi.randevuHatirlaticiKur(varOlanRandevu.key, doktorController.text, hastaneController.text, secilenTarih); 
+                            await BildirimServisi.randevuHatirlaticiKur(varOlanRandevu.key, doktorController.text, birlesikHastaneAdi, secilenTarih); 
                           }
                           Navigator.pop(context);
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Lütfen doktor, il, ilçe, hastane ve bölüm bilgilerini eksiksiz seçin!')),
+                          );
                         }
                       },
                       icon: const Icon(Icons.save),
                       label: Text(varOlanRandevu == null ? 'Kaydet' : 'Güncelle', style: const TextStyle(fontWeight: FontWeight.bold)),
                       style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16), backgroundColor: primaryGreen, foregroundColor: bgColor, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)))
-                    )
+                    ),
                   ),
                   const SizedBox(height: 20),
                 ],
@@ -157,12 +345,21 @@ class _RandevularSayfasiState extends State<RandevularSayfasi> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  Row(
                     children: [
-                      Text('PLANLI TAKİP', style: TextStyle(color: primaryOrange, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
-                      const SizedBox(height: 4),
-                      Text('Randevular', style: TextStyle(color: textLight, fontSize: 24, fontWeight: FontWeight.bold)),
+                      IconButton(
+                        icon: Icon(Icons.arrow_back_ios, color: textLight, size: 20),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                      const SizedBox(width: 8),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('PLANLI TAKİP', style: TextStyle(color: primaryOrange, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+                          const SizedBox(height: 4),
+                          Text('Randevular', style: TextStyle(color: textLight, fontSize: 24, fontWeight: FontWeight.bold)),
+                        ],
+                      ),
                     ],
                   ),
                   ElevatedButton.icon(
@@ -213,7 +410,7 @@ class _RandevularSayfasiState extends State<RandevularSayfasi> {
                                 const SizedBox(height: 16),
                                 Text('Gelecek bir randevunuz bulunmuyor.', style: TextStyle(color: textMuted, fontSize: 14)),
                               ],
-                            )
+                            ),
                           )
                         : ListView.builder(
                             padding: const EdgeInsets.symmetric(horizontal: 16),

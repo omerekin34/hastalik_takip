@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:local_auth/local_auth.dart';
-import 'package:flutter/foundation.dart' show kIsWeb; // WEB KONTROLÜ İÇİN EKLENDİ
+import 'package:flutter/foundation.dart' show kIsWeb; 
 import '../services/dil_servisi.dart';
 import '../main.dart'; 
 
