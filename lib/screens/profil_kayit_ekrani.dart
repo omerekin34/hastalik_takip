@@ -4,7 +4,7 @@ import '../models/kullanici_model.dart';
 import '../main.dart'; // AnaEkran'a yönlendirmek için
 
 class ProfilKayitEkrani extends StatefulWidget {
-  const ProfilKayitEkrani({Key? key}) : super(key: key);
+  const ProfilKayitEkrani({super.key});
 
   @override
   State<ProfilKayitEkrani> createState() => _ProfilKayitEkraniState();
@@ -17,26 +17,44 @@ class _ProfilKayitEkraniState extends State<ProfilKayitEkrani> {
   bool _beniHatirla = true;
 
   void _kayitOl() async {
-    if (_adController.text.isEmpty || _pinController.text.length < 4) {
+    if (_adController.text.trim().isEmpty || _pinController.text.length < 4) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Lütfen adınızı ve en az 4 haneli PIN girin.', style: TextStyle(color: Colors.white)), backgroundColor: Colors.redAccent),
+        const SnackBar(
+          content: Text('Lütfen adınızı ve en az 4 haneli PIN girin.', style: TextStyle(color: Colors.white)), 
+          backgroundColor: Colors.redAccent
+        ),
       );
       return;
     }
 
-    // Veritabanına Kullanıcıyı Kaydediyoruz
-    final box = Hive.box<Kullanici>('kullanici_kutusu');
-    final yeniKullanici = Kullanici(
-      adSoyad: _adController.text.trim(),
-      cinsiyet: _secilenCinsiyet,
-      pinKodu: _pinController.text,
-      beniHatirla: _beniHatirla,
-    );
-    await box.put('profil', yeniKullanici); // 'profil' anahtarıyla kaydediyoruz
+    try {
+      // Veritabanına Kullanıcıyı Kaydediyoruz
+      final box = Hive.box<Kullanici>('kullanici_kutusu');
+      final yeniKullanici = Kullanici(
+        adSoyad: _adController.text.trim(),
+        cinsiyet: _secilenCinsiyet,
+        pinKodu: _pinController.text,
+        beniHatirla: _beniHatirla,
+      );
+      await box.put('profil', yeniKullanici); 
 
-    // Kayıt bitince Ana Ekrana yönlendir
-    if (mounted) {
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const AnaEkran()));
+      // Kayıt bitince Ana Ekrana yönlendir (Geçmişi temizleyerek)
+      if (mounted) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const AnaEkran()),
+          (Route<dynamic> route) => false,
+        );
+      }
+    } catch (e) {
+      debugPrint("Kayıt Hatası: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Kayıt olurken bir hata oluştu. Lütfen uygulamayı yeniden başlatın.', style: TextStyle(color: Colors.white)), 
+            backgroundColor: Colors.redAccent
+          ),
+        );
+      }
     }
   }
 

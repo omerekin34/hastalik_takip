@@ -133,7 +133,7 @@ Widget _buildHeader(BuildContext context) {
       ],
     );
   }
- void _profilAyarMenusu(BuildContext context) {
+void _profilAyarMenusu(BuildContext context) {
     final box = Hive.box<Kullanici>('kullanici_kutusu');
     final kullanici = box.get('profil');
 
@@ -143,18 +143,18 @@ Widget _buildHeader(BuildContext context) {
     final pinController = TextEditingController(text: kullanici.pinKodu);
     String secilenCinsiyet = kullanici.cinsiyet;
     bool beniHatirla = kullanici.beniHatirla;
-    bool pinGizli = true; // Şifre gizleme özelliği için
+    bool pinGizli = true; 
 
-    // Premium Tema Renkleri
     final Color modalBgColor = const Color(0xFF161F2C);
     final Color inputBgColor = const Color(0xFF0B131E);
     final Color primaryGreen = const Color(0xFF00C48C);
     final Color dangerRed = const Color(0xFFFF4C4C);
+    final Color warningOrange = const Color(0xFFFF9800);
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent, // Yuvarlak köşeler için şeffaf
+      backgroundColor: Colors.transparent, 
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setModalState) {
@@ -173,7 +173,6 @@ Widget _buildHeader(BuildContext context) {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Sürükleme Çubuğu
                       Container(
                         width: 48,
                         height: 5,
@@ -184,7 +183,6 @@ Widget _buildHeader(BuildContext context) {
                         ),
                       ),
 
-                      // Premium Profil Başlığı ve Avatar
                       Row(
                         children: [
                           CircleAvatar(
@@ -202,7 +200,7 @@ Widget _buildHeader(BuildContext context) {
                               children: [
                                 const Text('Profil Ayarları', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
                                 const SizedBox(height: 4),
-                                Text('Kişisel bilgilerinizi yönetin', style: TextStyle(color: Colors.grey.shade400, fontSize: 12)),
+                                Text('Kişisel bilgilerinizi yönetin', style: TextStyle(color: Colors.grey, fontSize: 12)),
                               ],
                             ),
                           ),
@@ -215,7 +213,6 @@ Widget _buildHeader(BuildContext context) {
                       ),
                       const SizedBox(height: 28),
 
-                      // Ad Soyad Alanı (Derinlik Efektli)
                       TextFormField(
                         controller: adController,
                         style: const TextStyle(color: Colors.white),
@@ -231,7 +228,6 @@ Widget _buildHeader(BuildContext context) {
                       ),
                       const SizedBox(height: 16),
 
-                      // Cinsiyet Dropdown
                       DropdownButtonFormField<String>(
                         value: secilenCinsiyet,
                         dropdownColor: modalBgColor,
@@ -254,7 +250,6 @@ Widget _buildHeader(BuildContext context) {
                       ),
                       const SizedBox(height: 16),
 
-                      // Güvenlik PIN Alanı (Göz İkonlu)
                       TextFormField(
                         controller: pinController,
                         obscureText: pinGizli,
@@ -278,7 +273,6 @@ Widget _buildHeader(BuildContext context) {
                       ),
                       const SizedBox(height: 8),
 
-                      // Özel Tasarım Beni Hatırla Switch Kartı
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                         decoration: BoxDecoration(
@@ -313,7 +307,7 @@ Widget _buildHeader(BuildContext context) {
                       ),
                       const SizedBox(height: 32),
 
-                      // Güncelle Butonu (Senin Hive Kaydetme Mantığın)
+                      // 1. BUTON: DEĞİŞİKLİKLERİ KAYDET
                       SizedBox(
                         width: double.infinity,
                         height: 54,
@@ -324,7 +318,7 @@ Widget _buildHeader(BuildContext context) {
                               kullanici.cinsiyet = secilenCinsiyet;
                               kullanici.pinKodu = pinController.text;
                               kullanici.beniHatirla = beniHatirla;
-                              kullanici.save(); // Veritabanı güncellendi
+                              kullanici.save(); 
                               
                               Navigator.pop(context);
                               ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -342,26 +336,72 @@ Widget _buildHeader(BuildContext context) {
                           child: const Text('Değişiklikleri Kaydet', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                         ),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 12),
 
-                      // Çıkış Yap Butonu (Senin Hesabı Sıfırlama Mantığın)
+                      // 2. BUTON: SADECE ÇIKIŞ YAP
+                      SizedBox(
+                        width: double.infinity,
+                        height: 54,
+                        child: OutlinedButton.icon(
+                          onPressed: () {
+                            Navigator.pop(context); 
+                            Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
+                              MaterialPageRoute(builder: (context) => const KilitEkrani()),
+                              (route) => false,
+                            );
+                          },
+                          icon: Icon(Icons.logout_rounded, color: warningOrange, size: 20),
+                          label: Text('Oturumu Kapat (Çıkış Yap)', style: TextStyle(color: warningOrange, fontSize: 15, fontWeight: FontWeight.w600)),
+                          style: OutlinedButton.styleFrom(
+                            backgroundColor: warningOrange.withOpacity(0.05),
+                            side: BorderSide(color: warningOrange.withOpacity(0.3), width: 1.5),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      // 3. BUTON: HESABI TAMAMEN SIFIRLA
                       SizedBox(
                         width: double.infinity,
                         height: 54,
                         child: OutlinedButton.icon(
                           onPressed: () async {
-                            Navigator.pop(context); // Menüyü kapat
-                            await box.clear(); // Veritabanını sıfırla
-                            
-                            if (context.mounted) {
-                              Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
-                                MaterialPageRoute(builder: (context) => const ProfilKayitEkrani()), 
-                                (route) => false,
-                              );
+                            bool onayla = await showDialog(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                backgroundColor: modalBgColor,
+                                title: const Text('Hesabı Sıfırla', style: TextStyle(color: Colors.white)),
+                                content: const Text('Tüm ilaç, randevu ve profil verileriniz kalıcı olarak silinecek. Onaylıyor musunuz?', style: TextStyle(color: Colors.grey)),
+                                actions: [
+                                  TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('İptal', style: TextStyle(color: Colors.grey))),
+                                  ElevatedButton(
+                                    style: ElevatedButton.styleFrom(backgroundColor: dangerRed),
+                                    onPressed: () => Navigator.pop(context, true), 
+                                    child: const Text('Sıfırla', style: TextStyle(color: Colors.white))
+                                  ),
+                                ],
+                              )
+                            ) ?? false;
+
+                            if (onayla) {
+                              Navigator.pop(context); 
+                              await Hive.box<Kullanici>('kullanici_kutusu').clear();
+                              await Hive.box<Ilac>('ilaclar').clear();
+                              await Hive.box<Randevu>('randevular').clear();
+                              await Hive.box<Hastalik>('hastaliklar').clear();
+                              await Hive.box('gizlenenBildirimler').clear();
+                              
+                              if (context.mounted) {
+                                Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
+                                  MaterialPageRoute(builder: (context) => const ProfilKayitEkrani()), 
+                                  (route) => false,
+                                );
+                              }
                             }
                           },
-                          icon: Icon(Icons.logout_rounded, color: dangerRed, size: 20),
-                          label: Text('Hesabı Sıfırla ve Çıkış Yap', style: TextStyle(color: dangerRed, fontSize: 15, fontWeight: FontWeight.w600)),
+                          icon: Icon(Icons.delete_forever_rounded, color: dangerRed, size: 20),
+                          label: Text('Hesabı Tamamen Sıfırla', style: TextStyle(color: dangerRed, fontSize: 15, fontWeight: FontWeight.w600)),
                           style: OutlinedButton.styleFrom(
                             backgroundColor: dangerRed.withOpacity(0.05),
                             side: BorderSide(color: dangerRed.withOpacity(0.3), width: 1.5),
@@ -369,6 +409,7 @@ Widget _buildHeader(BuildContext context) {
                           ),
                         ),
                       ),
+
                     ],
                   ),
                 ),

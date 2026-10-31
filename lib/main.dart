@@ -16,7 +16,6 @@ import 'screens/profil_kayit_ekrani.dart';
 import 'screens/kilit_ekrani.dart'; 
 import 'screens/acilis_ekrani.dart';
 
-
 final ValueNotifier<ThemeMode> temaYoneticisi = ValueNotifier(ThemeMode.dark);
 
 void main() async {
@@ -33,7 +32,6 @@ void main() async {
   await Hive.openBox<Randevu>('randevular');
   await Hive.openBox<Kullanici>('kullanici_kutusu'); 
   await Hive.openBox('gizlenenBildirimler');
-
   
   await BildirimServisi.baslat();
   runApp(const HastalikTakipApp());
@@ -85,7 +83,6 @@ class HastalikTakipApp extends StatelessWidget {
                   elevation: 8,
                 ),
               ),
-              // Yönlendirme mantığı AcilisEkrani'ne taşındı
               home: const AcilisEkrani(), 
             );
           }
